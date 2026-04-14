@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>User Import Formatter</title>
 
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <header>
+        <h1>User Import File Formatter</h1>
+        <p>
+            Upload a CSV or Excel file to prepare an import-ready User file.
+        </p>
+    </header>
+
+    <main>
+
+        <!-- File Upload -->
+        <section id="upload-section">
+            <h2>Upload User File</h2>
+
+            <input
+                type="file"
+                id="fileInput"
+                accept=".csv,.xls,.xlsx"
+            />
+
+            <p class="hint">
+                Accepted formats: CSV, XLS, XLSX
+            </p>
+        </section>
+
+        <!-- Status Messages -->
+        <section id="status-section">
+            <div id="statusMessage"></div>
+        </section>
+
+        <!-- Column Mapping (hidden until needed) -->
+        <section id="mapping-section" class="hidden">
+            <h2>Map Columns</h2>
+
+            <p>
+                Select which columns correspond to each required field.
+            </p>
+
+            <div id="mappingContainer"></div>
+
+            <button id="processMappedData">
+                Process File
+            </button>
+        </section>
+
+        <!-- Output -->
+        <section id="output-section" class="hidden">
+            <h2>Import Ready File</h2>
+
+            <p id="rowCount"></p>
+
+            <button id="downloadCsv">
+                Download CSV
+            </button>
+        </section>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
+``
