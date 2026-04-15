@@ -1,8 +1,8 @@
-/* ===== Global ===== */
+/* ===== Global (Light Theme by Default) ===== */
 body {
   font-family: Arial, sans-serif;
-  background-color: #0f1115;
-  color: #e6e6e6;
+  background-color: #ffffff;
+  color: #24292f;
   margin: 0;
 }
 
@@ -24,11 +24,16 @@ input[type="file"] {
 /* ===== Selects ===== */
 select {
   padding: 6px 8px;
-  background-color: #161b22;
-  color: #ffffff;
-  border: 1px solid #30363d;
+  background-color: #ffffff;
+  color: #24292f;
+  border: 1px solid #d0d7de;
   border-radius: 4px;
   width: 100%;
+}
+
+/* Fixed-width mapping dropdowns (alignment preserved) */
+#mappingContainer select {
+  max-width: 260px;
 }
 
 /* ===== Buttons ===== */
@@ -51,27 +56,27 @@ button:hover {
   font-weight: 500;
 }
 
-/* ===== Mapping Section ===== */
+/* ===== Expected / Mapping Section Containers ===== */
 #mapping-section {
   margin-top: 24px;
   padding: 16px;
-  background-color: #161b22;
-  border: 1px solid #30363d;
+  background-color: #f6f8fa;
+  border: 1px solid #d0d7de;
   border-radius: 6px;
 }
 
-/* ===== Mapping Helper Text ===== */
+/* Helper text */
 #mapping-section p {
   margin-top: 6px;
   margin-bottom: 10px;
   font-size: 13px;
-  color: #aaa;
+  color: #57606a;
 }
 
-/* ===== Mapping Grid (HARD ALIGNMENT FIX) ===== */
+/* ===== Mapping Grid ===== */
 #mappingContainer {
   display: grid;
-  grid-template-columns: 180px 260px; /* fixed right edge */
+  grid-template-columns: 180px 260px;
   column-gap: 16px;
   row-gap: 10px;
   margin-top: 14px;
@@ -80,7 +85,7 @@ button:hover {
 #mappingContainer label {
   text-align: right;
   font-size: 13px;
-  color: #c9d1d9;
+  color: #57606a;
   padding-top: 6px;
 }
 
