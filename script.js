@@ -1,3 +1,6 @@
+console.log("✅ NEW SCRIPT LOADED - MAPPING UI VERSION");
+``
+
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
 const statusMessage = document.getElementById("statusMessage");
