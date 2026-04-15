@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – MAPPING UI VERSION");
+console.log("✅ NEW SCRIPT LOADED – CSV GENERATION VERSION");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -6,46 +6,47 @@ const statusMessage = document.getElementById("statusMessage");
 const mappingSection = document.getElementById("mapping-section");
 const mappingContainer = document.getElementById("mappingContainer");
 const processMappedBtn = document.getElementById("processMappedData");
+const downloadBtn = document.getElementById("downloadCsv");
+const rowCountEl = document.getElementById("rowCount");
 
 let rawData = [];
 let headers = [];
 let headerMap = {};
+let outputData = [];
 
-// ===== Field Definitions =====
+// ===== Field Definitions (Single Source of Truth) =====
 const fieldDefinitions = [
-    { key: "firstname", label: "First Name", required: true },
-    { key: "lastname", label: "Last Name", required: true },
+    { key: "firstname", label: "FirstName", required: true },
+    { key: "lastname", label: "LastName", required: true },
     { key: "description", label: "Description", required: false },
     { key: "pin", label: "PIN", required: true },
     { key: "role", label: "Role", required: true },
     { key: "prox", label: "Prox", required: true },
     { key: "email", label: "Email", required: true },
     { key: "phone", label: "Phone", required: true },
-    { key: "saml", label: "SAML ID", required: false }
+    { key: "saml", label: "SAML", required: false }
 ];
 
 // ===== Header Normalization =====
-function normalizeHeader(header) {
-    return header
-        .toLowerCase()
-        .replace(/\s+/g, "")
-        .replace(/[^a-z0-9]/g, "");
+function normalizeHeader(h) {
+    return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
 
 // ===== Event Listeners =====
 fileInput.addEventListener("change", handleFileUpload);
 processMappedBtn.addEventListener("click", processMappedData);
+downloadBtn.addEventListener("click", downloadCsv);
 
-// Ensure mapping UI is hidden on load
 hideMapping();
 
-// ===== File Upload Handler =====
-function handleFileUpload(event) {
-    const file = event.target.files[0];
+// ===== File Upload =====
+function handleFileUpload(e) {
+    const file = e.target.files[0];
     if (!file) return;
 
     clearStatus();
     hideMapping();
+    outputData = [];
 
     setStatus(`Loading file: ${file.name}`);
     const ext = file.name.split(".").pop().toLowerCase();
@@ -55,11 +56,10 @@ function handleFileUpload(event) {
     else setError("Unsupported file type.");
 }
 
-// ===== CSV Parsing =====
+// ===== CSV =====
 function readCsvFile(file) {
     const reader = new FileReader();
     reader.onload = e => parseCsv(e.target.result);
-    reader.onerror = () => setError("Failed to read CSV file.");
     reader.readAsText(file);
 }
 
@@ -69,20 +69,20 @@ function parseCsv(text) {
 
     rawData = rows.slice(1).map(row => {
         const values = row.split(",");
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = values[i]?.trim() || "");
-        return obj;
+        const o = {};
+        headers.forEach((h, i) => o[h] = values[i]?.trim() || "");
+        return o;
     });
 
     postParse("CSV");
 }
 
-// ===== Excel Parsing =====
+// ===== Excel =====
 function readExcelFile(file) {
     const reader = new FileReader();
     reader.onload = e => {
-        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
         rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
         headers = Object.keys(rawData[0] || {});
         postParse("Excel");
@@ -90,33 +90,26 @@ function readExcelFile(file) {
     reader.readAsArrayBuffer(file);
 }
 
-// ===== Post-Parse =====
+// ===== Post Parse =====
 function postParse(type) {
     setSuccess(`Loaded ${rawData.length} rows from ${type} file.`);
-    console.log("Headers:", headers);
-    console.log("Data:", rawData);
-
-    if (!checkSchemaMatch()) {
-        showMappingUI();
-    }
+    if (!checkSchemaMatch()) showMappingUI();
+    else autoMapSchema();
 }
 
-// ===== Schema Detection =====
+// ===== Schema =====
 function checkSchemaMatch() {
     const normalized = headers.map(normalizeHeader);
-    const missing = fieldDefinitions
-        .filter(f => !normalized.includes(f.key))
-        .map(f => f.key);
+    return fieldDefinitions.every(f => normalized.includes(f.key));
+}
 
-    if (missing.length === 0) {
-        setSuccess("File matches User Import schema. No column mapping required.");
-        console.log("Schema match confirmed.");
-        return true;
-    }
-
-    console.warn("Schema mismatch. Missing headers:", missing);
-    setStatus("File does not match expected format. Column mapping will be required.");
-    return false;
+function autoMapSchema() {
+    headerMap = {};
+    fieldDefinitions.forEach(f => {
+        const match = headers.find(h => normalizeHeader(h) === f.key);
+        headerMap[f.key] = match || "";
+    });
+    buildOutput();
 }
 
 // ===== Mapping UI =====
@@ -124,14 +117,13 @@ function showMappingUI() {
     mappingContainer.innerHTML = "";
     headerMap = {};
 
-    fieldDefinitions.forEach(field => {
+    fieldDefinitions.forEach(f => {
         const row = document.createElement("div");
-
         const label = document.createElement("label");
-        label.textContent = field.label + (field.required ? " *" : "");
+        label.textContent = f.label + (f.required ? " *" : "");
 
         const select = document.createElement("select");
-        select.dataset.field = field.key;
+        select.dataset.field = f.key;
 
         const empty = document.createElement("option");
         empty.value = "";
@@ -160,45 +152,76 @@ function hideMapping() {
 // ===== Process Mapping =====
 function processMappedData() {
     headerMap = {};
-    let missingRequired = [];
+    let missing = [];
 
-    fieldDefinitions.forEach(field => {
-        const select = document.querySelector(`select[data-field="${field.key}"]`);
-        const value = select.value;
-
-        if (!value && field.required) {
-            missingRequired.push(field.label);
-        }
-
-        headerMap[field.key] = value || "";
+    fieldDefinitions.forEach(f => {
+        const val = document.querySelector(`select[data-field="${f.key}"]`).value;
+        if (!val && f.required) missing.push(f.label);
+        headerMap[f.key] = val || "";
     });
 
-    if (missingRequired.length) {
-        setError("Missing required mappings: " + missingRequired.join(", "));
+    if (missing.length) {
+        setError("Missing required mappings: " + missing.join(", "));
         return;
     }
 
-    setSuccess("Column mapping accepted. Ready to generate import file.");
-    console.log("Header Map:", headerMap);
+    buildOutput();
 }
 
-// ===== Status Helpers =====
-function setStatus(message) {
-    statusMessage.textContent = message;
-    statusMessage.style.color = "#333";
+// ===== Build Output =====
+function buildOutput() {
+    outputData = [];
+
+    for (let i = 0; i < rawData.length; i++) {
+        const row = rawData[i];
+        const out = {};
+
+        for (const f of fieldDefinitions) {
+            const source = headerMap[f.key];
+            let value = source ? row[source] : "";
+
+            // Validation
+            if (f.key === "pin" || f.key === "prox") {
+                if (!/^\d{4,}$/.test(value)) {
+                    return setError(`Row ${i + 2}: ${f.label} must be numeric and at least 4 digits.`);
+                }
+            }
+
+            if (f.key === "role" && value !== "User" && value !== "Admin") {
+                return setError(`Row ${i + 2}: Role must be exactly 'User' or 'Admin'.`);
+            }
+
+            // FUTURE HOOK:
+            // If Prox is empty, auto-generate starting at 1000 + row index
+
+            out[f.label] = value || "";
+        }
+
+        outputData.push(out);
+    }
+
+    rowCountEl.textContent = `${outputData.length} users ready for import.`;
+    setSuccess("Import-ready CSV generated.");
 }
 
-function setSuccess(message) {
-    statusMessage.textContent = message;
-    statusMessage.style.color = "green";
+// ===== Download =====
+function downloadCsv() {
+    const headers = fieldDefinitions.map(f => f.label);
+    const rows = outputData.map(r => headers.map(h => r[h]).join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "user_import.csv";
+    a.click();
 }
 
-function setError(message) {
-    statusMessage.textContent = message;
-    statusMessage.style.color = "red";
-}
-
-function clearStatus() {
-    statusMessage.textContent = "";
-}
+// ===== Status =====
+function setStatus(m) { statusMessage.textContent = m; statusMessage.style.color = "#333"; }
+function setSuccess(m) { statusMessage.textContent = m; statusMessage.style.color = "green"; }
+function setError(m) { statusMessage.textContent = m; statusMessage.style.color = "red"; }
+function clearStatus() { statusMessage.textContent = ""; }
 ``
