@@ -5,6 +5,29 @@ const statusMessage = document.getElementById("statusMessage");
 let rawData = [];
 let headers = [];
 
+// ===== Canonical User Import Schema =====
+// These are normalized (lowercase, no spaces/punctuation)
+const canonicalHeaders = [
+    "firstname",
+    "lastname",
+    "description",
+    "pin",
+    "role",
+    "prox",
+    "email",
+    "phone",
+    "saml"
+];
+
+// ===== Header Normalization =====
+// Case-insensitive, spacing and punctuation tolerant
+function normalizeHeader(header) {
+    return header
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[^a-z0-9]/g, "");
+}
+
 // ===== Event Listeners =====
 fileInput.addEventListener("change", handleFileUpload);
 
@@ -67,6 +90,8 @@ function parseCsv(text) {
     setSuccess(`Loaded ${rawData.length} rows from CSV file.`);
     console.log("Headers:", headers);
     console.log("Data:", rawData);
+
+    checkSchemaMatch();
 }
 
 // ===== Excel Parsing (XLS / XLSX) =====
@@ -97,6 +122,8 @@ function readExcelFile(file) {
             console.log("Headers:", headers);
             console.log("Data:", rawData);
 
+            checkSchemaMatch();
+
         } catch (error) {
             console.error(error);
             setError("Failed to parse Excel file.");
@@ -108,6 +135,25 @@ function readExcelFile(file) {
     };
 
     reader.readAsArrayBuffer(file);
+}
+
+// ===== Schema Detection =====
+function checkSchemaMatch() {
+    const normalizedUploadedHeaders = headers.map(normalizeHeader);
+
+    const missingHeaders = canonicalHeaders.filter(
+        required => !normalizedUploadedHeaders.includes(required)
+    );
+
+    if (missingHeaders.length === 0) {
+        setSuccess("File matches User Import schema. No column mapping required.");
+        console.log("Schema match confirmed.");
+        return true;
+    }
+
+    console.warn("Schema mismatch. Missing headers:", missingHeaders);
+    setStatus("File does not match expected format. Column mapping will be required.");
+    return false;
 }
 
 // ===== Status Helpers =====
