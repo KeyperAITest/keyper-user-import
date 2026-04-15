@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – CSV GENERATION VERSION (AUTO DOWNLOAD)");
+console.log("✅ NEW SCRIPT LOADED – CSV GENERATION VERSION (PROX AUTO-FILL)");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -156,7 +156,9 @@ function processMappedData() {
 
     fieldDefinitions.forEach(f => {
         const val = document.querySelector(`select[data-field="${f.key}"]`).value;
-        if (!val && f.required) missing.push(f.label);
+        if (!val && f.required && f.key !== "prox") {
+            missing.push(f.label);
+        }
         headerMap[f.key] = val || "";
     });
 
@@ -168,9 +170,10 @@ function processMappedData() {
     buildOutput();
 }
 
-// ===== Build Output =====
+// ===== Build Output (WITH PROX AUTO-FILL) =====
 function buildOutput() {
     outputData = [];
+    let proxCounter = 1000;
 
     for (let i = 0; i < rawData.length; i++) {
         const row = rawData[i];
@@ -179,6 +182,11 @@ function buildOutput() {
         for (const f of fieldDefinitions) {
             const source = headerMap[f.key];
             let value = source ? row[source] : "";
+
+            // ✅ PROX AUTO-GENERATION
+            if (f.key === "prox" && !value) {
+                value = String(proxCounter++);
+            }
 
             // Validation
             if (f.key === "pin" || f.key === "prox") {
@@ -191,9 +199,6 @@ function buildOutput() {
                 return setError(`Row ${i + 2}: Role must be exactly 'User' or 'Admin'.`);
             }
 
-            // FUTURE HOOK:
-            // If Prox is empty, auto-generate starting at 1000 + row index
-
             out[f.label] = value || "";
         }
 
@@ -203,7 +208,6 @@ function buildOutput() {
     rowCountEl.textContent = `${outputData.length} users ready for import.`;
     setSuccess("Import-ready CSV generated.");
 
-    // ✅ AUTO-DOWNLOAD (KEY CHANGE)
     downloadCsv();
 }
 
