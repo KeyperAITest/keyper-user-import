@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – FINAL SCHEMA UPDATE (Email/Phone Optional, SAML Removed)");
+console.log("✅ NEW SCRIPT LOADED – PROX AUTO-GEN FIXED");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -14,16 +14,16 @@ let headers = [];
 let headerMap = {};
 let outputData = [];
 
-// ===== Field Definitions (AUTHORITATIVE SCHEMA) =====
+// ===== Field Definitions (FINAL) =====
 const fieldDefinitions = [
   { key: "firstname", label: "FirstName", required: true },
   { key: "lastname", label: "LastName", required: true },
   { key: "description", label: "Description", required: false },
   { key: "pin", label: "PIN", required: true },
   { key: "role", label: "Role", required: true },
-  { key: "prox", label: "Prox", required: true },
-  { key: "email", label: "Email", required: false },   // ✅ optional
-  { key: "phone", label: "Phone", required: false }    // ✅ optional
+  { key: "prox", label: "Prox", required: false },   // ✅ NOT required at mapping
+  { key: "email", label: "Email", required: false },
+  { key: "phone", label: "Phone", required: false }
 ];
 
 // ===== Header Normalization =====
@@ -31,14 +31,14 @@ function normalizeHeader(h) {
   return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
 
-// ===== Event Listeners =====
+// ===== Events =====
 fileInput.addEventListener("change", handleFileUpload);
 processMappedBtn.addEventListener("click", processMappedData);
 downloadBtn.addEventListener("click", downloadCsv);
 
 hideMapping();
 
-// ===== File Upload =====
+// ===== Upload =====
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -68,9 +68,9 @@ function parseCsv(text) {
 
   rawData = rows.slice(1).map(row => {
     const values = row.split(",");
-    const o = {};
-    headers.forEach((h, i) => (o[h] = values[i]?.trim() || ""));
-    return o;
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = values[i]?.trim() || "");
+    return obj;
   });
 
   postParse("CSV");
@@ -96,7 +96,7 @@ function postParse(type) {
   else autoMapSchema();
 }
 
-// ===== Schema Check =====
+// ===== Schema =====
 function checkSchemaMatch() {
   const normalized = headers.map(normalizeHeader);
   return fieldDefinitions.every(f => normalized.includes(f.key));
@@ -170,25 +170,24 @@ function processMappedData() {
   buildOutput();
 }
 
-// ===== Build Output (Prox Auto‑Fill + Role Normalization) =====
+// ===== Build Output (✅ PROX AUTO-GENERATION) =====
 function buildOutput() {
   outputData = [];
   let proxCounter = 1000;
 
-  for (let i = 0; i < rawData.length; i++) {
-    const row = rawData[i];
+  for (const row of rawData) {
     const out = {};
 
     for (const f of fieldDefinitions) {
       const source = headerMap[f.key];
       let value = source ? row[source] : "";
 
-      // ✅ Prox auto‑generation
+      // ✅ Auto-generate Prox if missing
       if (f.key === "prox" && !value) {
         value = String(proxCounter++);
       }
 
-      // ✅ Role normalization
+      // ✅ Normalize Role
       if (f.key === "role" && value) {
         value = value.toLowerCase();
         if (value === "user") value = "User";
@@ -213,7 +212,7 @@ function buildOutput() {
   }
 
   rowCountEl.textContent = `${outputData.length} users ready for import.`;
-  setSuccess("Import‑ready CSV generated.");
+  setSuccess("Import-ready CSV generated.");
 
   downloadCsv();
 }
@@ -237,23 +236,8 @@ function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
-// ===== Status Helpers =====
-function setStatus(m) {
-  statusMessage.textContent = m;
-  statusMessage.style.color = "#333";
-}
-
-function setSuccess(m) {
-  statusMessage.textContent = m;
-  statusMessage.style.color = "green";
-}
-
-function setError(m) {
-  statusMessage.textContent = m;
-  statusMessage.style.color = "red";
-}
-
-function clearStatus() {
-  statusMessage.textContent = "";
-}
-``
+// ===== Status =====
+function setStatus(m) { statusMessage.textContent = m; statusMessage.style.color = "#333"; }
+function setSuccess(m) { statusMessage.textContent = m; statusMessage.style.color = "green"; }
+function setError(m) { statusMessage.textContent = m; statusMessage.style.color = "red"; }
+function clearStatus() { statusMessage.textContent = ""; }
