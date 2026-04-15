@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – CSV GENERATION VERSION (PROX AUTO-FILL)");
+console.log("✅ NEW SCRIPT LOADED – CSV GENERATION VERSION (PROX + ROLE NORMALIZATION)");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -14,7 +14,7 @@ let headers = [];
 let headerMap = {};
 let outputData = [];
 
-// ===== Field Definitions (Single Source of Truth) =====
+// ===== Field Definitions =====
 const fieldDefinitions = [
     { key: "firstname", label: "FirstName", required: true },
     { key: "lastname", label: "LastName", required: true },
@@ -170,7 +170,7 @@ function processMappedData() {
     buildOutput();
 }
 
-// ===== Build Output (WITH PROX AUTO-FILL) =====
+// ===== Build Output (PROX AUTO-FILL + ROLE NORMALIZATION) =====
 function buildOutput() {
     outputData = [];
     let proxCounter = 1000;
@@ -188,6 +188,13 @@ function buildOutput() {
                 value = String(proxCounter++);
             }
 
+            // ✅ ROLE NORMALIZATION
+            if (f.key === "role" && value) {
+                value = value.toLowerCase();
+                value = value === "user" ? "User" :
+                        value === "admin" ? "Admin" : value;
+            }
+
             // Validation
             if (f.key === "pin" || f.key === "prox") {
                 if (!/^\d{4,}$/.test(value)) {
@@ -196,7 +203,7 @@ function buildOutput() {
             }
 
             if (f.key === "role" && value !== "User" && value !== "Admin") {
-                return setError(`Row ${i + 2}: Role must be exactly 'User' or 'Admin'.`);
+                return setError(`Row ${i + 2}: Role must be User or Admin.`);
             }
 
             out[f.label] = value || "";
