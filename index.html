@@ -14,12 +14,12 @@
   <!-- ✅ Styles -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- ✅ SheetJS (Excel Support) -->
+  <!-- ✅ SheetJS -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
-  <!-- ✅ Keyper Header (Matched to Inventory Import) -->
+  <!-- ✅ Keyper Header (Inventory‑style) -->
   <header
     style="
       display: flex;
@@ -30,13 +30,11 @@
       background-color: #0f1115;
     "
   >
-    <!-- ✅ Clickable Keyper Logo -->
     <a
       href="https://KeyperSystems.com"
       target="_blank"
       rel="noopener noreferrer"
-      title="Visit KeyperSystems.com"
-      style="display: inline-flex; align-items: center;"
+      style="display:inline-flex; align-items:center;"
     >
       <img
         src="KeyperLogo.webp"
@@ -45,7 +43,6 @@
       >
     </a>
 
-    <!-- ✅ Title + Subtitle (Matches Inventory Layout) -->
     <div>
       <div style="font-size: 18px; font-weight: 600; color: #ffffff;">
         User Import File Formatter
@@ -56,8 +53,14 @@
     </div>
   </header>
 
-  <!-- ✅ Main Content -->
-  <main style="padding: 20px; max-width: 1000px;">
+  <!-- ✅ Main Content (LEFT‑ALIGNED LIKE INVENTORY) -->
+  <main
+    style="
+      padding: 20px;
+      max-width: 900px;
+      margin-left: 0;
+    "
+  >
 
     <p>
       Upload your user file (CSV or Excel). This tool verifies, normalizes,
@@ -66,6 +69,7 @@
 
     <!-- ✅ Upload -->
     <h3>Upload User File</h3>
+
     <input type="file" id="fileInput" accept=".csv,.xls,.xlsx">
 
     <p style="margin-top: 10px; font-size: 14px;">
@@ -75,7 +79,25 @@
     <!-- ✅ Status -->
     <div id="statusMessage" style="margin-top: 15px;"></div>
 
-    <!-- ✅ Mapping Section (hidden unless needed) -->
+    <!-- ✅ Expected Import Format (LIKE INVENTORY) -->
+    <div
+      style="
+        margin-top: 15px;
+        padding: 10px;
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        font-size: 13px;
+      "
+    >
+      <strong>Expected Import Format:</strong>
+      <pre style="margin-top: 8px; white-space: pre-wrap;">
+FirstName,LastName,Description,PIN,Role,Prox,Email,Phone,SAML
+Bob,Smith,,1234,User,1000,bob@company.com,555-555-5555,
+      </pre>
+    </div>
+
+    <!-- ✅ Mapping Section -->
     <section id="mapping-section" class="hidden" style="margin-top: 30px;">
       <h3>Map Columns</h3>
 
@@ -107,7 +129,7 @@
   </main>
 
   <!-- ✅ App Logic -->
-  <script src="script.js?v=ui-align"></script>
+  <script src="script.js?v=ui-final"></script>
 
 </body>
 </html>
