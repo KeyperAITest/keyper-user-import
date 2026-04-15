@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – CSV GENERATION VERSION");
+console.log("✅ NEW SCRIPT LOADED – CSV GENERATION VERSION (AUTO DOWNLOAD)");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -202,10 +202,15 @@ function buildOutput() {
 
     rowCountEl.textContent = `${outputData.length} users ready for import.`;
     setSuccess("Import-ready CSV generated.");
+
+    // ✅ AUTO-DOWNLOAD (KEY CHANGE)
+    downloadCsv();
 }
 
 // ===== Download =====
 function downloadCsv() {
+    if (!outputData.length) return;
+
     const headers = fieldDefinitions.map(f => f.label);
     const rows = outputData.map(r => headers.map(h => r[h]).join(","));
     const csv = [headers.join(","), ...rows].join("\n");
@@ -217,6 +222,8 @@ function downloadCsv() {
     a.href = url;
     a.download = "user_import.csv";
     a.click();
+
+    URL.revokeObjectURL(url);
 }
 
 // ===== Status =====
