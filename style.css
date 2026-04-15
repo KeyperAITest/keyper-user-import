@@ -28,12 +28,7 @@ select {
   color: #ffffff;
   border: 1px solid #30363d;
   border-radius: 4px;
-}
-
-/* ✅ Prevent absurdly wide dropdowns */
-#mappingContainer select {
   width: 100%;
-  max-width: 260px;
 }
 
 /* ===== Buttons ===== */
@@ -56,7 +51,7 @@ button:hover {
   font-weight: 500;
 }
 
-/* ===== Mapping Section Container ===== */
+/* ===== Mapping Section ===== */
 #mapping-section {
   margin-top: 24px;
   padding: 16px;
@@ -65,7 +60,7 @@ button:hover {
   border-radius: 6px;
 }
 
-/* ===== Mapping Helper Text Spacing ===== */
+/* ===== Mapping Helper Text ===== */
 #mapping-section p {
   margin-top: 6px;
   margin-bottom: 10px;
@@ -73,10 +68,10 @@ button:hover {
   color: #aaa;
 }
 
-/* ===== Mapping Grid Layout ===== */
+/* ===== Mapping Grid (HARD ALIGNMENT FIX) ===== */
 #mappingContainer {
   display: grid;
-  grid-template-columns: 180px 1fr;
+  grid-template-columns: 180px 260px; /* fixed right edge */
   column-gap: 16px;
   row-gap: 10px;
   margin-top: 14px;
@@ -98,3 +93,4 @@ button:hover {
 .hidden {
   display: none;
 }
+``
