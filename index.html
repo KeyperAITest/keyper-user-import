@@ -1,27 +1,45 @@
-<!-- User Import Formatter -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>User Import File Formatter</title>
 
+    <!-- ===== Favicons / App Icons ===== -->
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+
+    <!-- ===== Styles ===== -->
     <link rel="stylesheet" href="style.css">
 
-    <!-- SheetJS for Excel parsing -->
+    <!-- ===== SheetJS (Excel Support) ===== -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
-    <header>
-        <h1>User Import File Formatter</h1>
-        <p>
-            Upload a CSV or Excel file to prepare an import-ready User file.
-        </p>
+    <!-- ===== Branded Header ===== -->
+    <header style="border-bottom: 2px solid #2d73ff;">
+        <div style="max-width: 900px; margin: 0 auto; padding: 16px 24px;">
+            <a href="https://www.keypersystems.com" target="_blank">
+                <img
+                    src="KeyperLogo.webp"
+                    alt="Keyper"
+                    style="height: 36px;"
+                />
+            </a>
+        </div>
     </header>
 
     <main>
 
-        <!-- File Upload -->
+        <!-- ===== Page Title ===== -->
+        <h1>User Import File Formatter</h1>
+        <p>
+            Upload a CSV or Excel file to prepare an import‑ready User file.
+        </p>
+
+        <!-- ===== Upload Section ===== -->
         <section id="upload-section">
             <h2>Upload User File</h2>
 
@@ -36,17 +54,21 @@
             </p>
         </section>
 
-        <!-- Status Messages -->
+        <!-- ===== Status ===== -->
         <section id="status-section">
             <div id="statusMessage"></div>
         </section>
 
-        <!-- Column Mapping (hidden until needed) -->
+        <!-- ===== Mapping Section ===== -->
         <section id="mapping-section" class="hidden">
             <h2>Map Columns</h2>
 
-            <p>
-                Select which columns correspond to each required field.
+            <p style="font-size: 13px; color: #aaa;">
+                Fields marked with <strong>*</strong> are required.
+            </p>
+
+            <p style="font-size: 13px; color: #aaa;">
+                Prox values are automatically generated starting at <strong>1000</strong> if not provided.
             </p>
 
             <div id="mappingContainer"></div>
@@ -56,10 +78,8 @@
             </button>
         </section>
 
-        <!-- Output -->
-        <section id="output-section" class="hidden">
-            <h2>Import Ready File</h2>
-
+        <!-- ===== Output Section ===== -->
+        <section id="output-section">
             <p id="rowCount"></p>
 
             <button id="downloadCsv">
@@ -69,7 +89,8 @@
 
     </main>
 
-    <script src="script.js?v=2"></script>
+    <!-- ===== Script (Versioned to avoid cache) ===== -->
+    <script src="script.js?v=final"></script>
+
 </body>
 </html>
-``
