@@ -1,4 +1,3 @@
-
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
 const statusMessage = document.getElementById("statusMessage");
@@ -70,10 +69,45 @@ function parseCsv(text) {
     console.log("Data:", rawData);
 }
 
-// ===== Excel Parsing =====
-// NOTE: This requires SheetJS (XLSX library), which we will add next
+// ===== Excel Parsing (XLS / XLSX) =====
 function readExcelFile(file) {
-    setError("Excel parsing not wired yet. CSV works first.");
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                defval: ""
+            });
+
+            if (jsonData.length === 0) {
+                setError("Excel file contains no data.");
+                return;
+            }
+
+            headers = Object.keys(jsonData[0]);
+            rawData = jsonData;
+
+            setSuccess(`Loaded ${rawData.length} rows from Excel file.`);
+            console.log("Headers:", headers);
+            console.log("Data:", rawData);
+
+        } catch (error) {
+            console.error(error);
+            setError("Failed to parse Excel file.");
+        }
+    };
+
+    reader.onerror = function () {
+        setError("Failed to read Excel file.");
+    };
+
+    reader.readAsArrayBuffer(file);
 }
 
 // ===== Status Helpers =====
