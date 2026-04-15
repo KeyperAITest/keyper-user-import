@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – FINAL ERROR MESSAGE CLEANUP");
+console.log("✅ NEW SCRIPT LOADED – FINAL SCHEMA UPDATE (Email/Phone Optional, SAML Removed)");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -14,7 +14,7 @@ let headers = [];
 let headerMap = {};
 let outputData = [];
 
-// ===== Field Definitions =====
+// ===== Field Definitions (AUTHORITATIVE SCHEMA) =====
 const fieldDefinitions = [
   { key: "firstname", label: "FirstName", required: true },
   { key: "lastname", label: "LastName", required: true },
@@ -22,9 +22,8 @@ const fieldDefinitions = [
   { key: "pin", label: "PIN", required: true },
   { key: "role", label: "Role", required: true },
   { key: "prox", label: "Prox", required: true },
-  { key: "email", label: "Email", required: true },
-  { key: "phone", label: "Phone", required: true },
-  { key: "saml", label: "SAML", required: false }
+  { key: "email", label: "Email", required: false },   // ✅ optional
+  { key: "phone", label: "Phone", required: false }    // ✅ optional
 ];
 
 // ===== Header Normalization =====
@@ -97,7 +96,7 @@ function postParse(type) {
   else autoMapSchema();
 }
 
-// ===== Schema =====
+// ===== Schema Check =====
 function checkSchemaMatch() {
   const normalized = headers.map(normalizeHeader);
   return fieldDefinitions.every(f => normalized.includes(f.key));
@@ -157,7 +156,7 @@ function processMappedData() {
 
   fieldDefinitions.forEach(f => {
     const val = document.querySelector(`select[data-field="${f.key}"]`).value;
-    if (!val && f.required && f.key !== "prox") {
+    if (!val && f.required) {
       missing.push(f.label);
     }
     headerMap[f.key] = val || "";
@@ -184,7 +183,7 @@ function buildOutput() {
       const source = headerMap[f.key];
       let value = source ? row[source] : "";
 
-      // ✅ Prox auto-fill
+      // ✅ Prox auto‑generation
       if (f.key === "prox" && !value) {
         value = String(proxCounter++);
       }
@@ -196,7 +195,7 @@ function buildOutput() {
         if (value === "admin") value = "Admin";
       }
 
-      // ✅ Validation (NO ROW REFERENCES)
+      // ✅ Validation
       if (f.key === "pin" || f.key === "prox") {
         if (!/^\d{4,}$/.test(value)) {
           return setError(`${f.label} must be numeric and at least 4 digits.`);
@@ -257,3 +256,4 @@ function setError(m) {
 function clearStatus() {
   statusMessage.textContent = "";
 }
+``
