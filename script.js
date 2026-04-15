@@ -1,5 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED - MAPPING UI VERSION");
-``
+console.log("✅ NEW SCRIPT LOADED – MAPPING UI VERSION");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -37,6 +36,9 @@ function normalizeHeader(header) {
 fileInput.addEventListener("change", handleFileUpload);
 processMappedBtn.addEventListener("click", processMappedData);
 
+// Ensure mapping UI is hidden on load
+hideMapping();
+
 // ===== File Upload Handler =====
 function handleFileUpload(event) {
     const file = event.target.files[0];
@@ -45,8 +47,8 @@ function handleFileUpload(event) {
     clearStatus();
     hideMapping();
 
-    const ext = file.name.split(".").pop().toLowerCase();
     setStatus(`Loading file: ${file.name}`);
+    const ext = file.name.split(".").pop().toLowerCase();
 
     if (ext === "csv") readCsvFile(file);
     else if (ext === "xls" || ext === "xlsx") readExcelFile(file);
@@ -57,7 +59,7 @@ function handleFileUpload(event) {
 function readCsvFile(file) {
     const reader = new FileReader();
     reader.onload = e => parseCsv(e.target.result);
-    reader.onerror = () => setError("Failed to read CSV.");
+    reader.onerror = () => setError("Failed to read CSV file.");
     reader.readAsText(file);
 }
 
@@ -88,7 +90,7 @@ function readExcelFile(file) {
     reader.readAsArrayBuffer(file);
 }
 
-// ===== Post‑Parse Handling =====
+// ===== Post-Parse =====
 function postParse(type) {
     setSuccess(`Loaded ${rawData.length} rows from ${type} file.`);
     console.log("Headers:", headers);
@@ -108,6 +110,7 @@ function checkSchemaMatch() {
 
     if (missing.length === 0) {
         setSuccess("File matches User Import schema. No column mapping required.");
+        console.log("Schema match confirmed.");
         return true;
     }
 
@@ -167,17 +170,35 @@ function processMappedData() {
             missingRequired.push(field.label);
         }
 
-        headerMap[field.key] = value || null;
+        headerMap[field.key] = value || "";
     });
 
     if (missingRequired.length) {
-        setError(
-            "Missing required mappings: " + missingRequired.join(", ")
-        );
+        setError("Missing required mappings: " + missingRequired.join(", "));
         return;
     }
 
     setSuccess("Column mapping accepted. Ready to generate import file.");
     console.log("Header Map:", headerMap);
+}
+
+// ===== Status Helpers =====
+function setStatus(message) {
+    statusMessage.textContent = message;
+    statusMessage.style.color = "#333";
+}
+
+function setSuccess(message) {
+    statusMessage.textContent = message;
+    statusMessage.style.color = "green";
+}
+
+function setError(message) {
+    statusMessage.textContent = message;
+    statusMessage.style.color = "red";
+}
+
+function clearStatus() {
+    statusMessage.textContent = "";
 }
 ``
