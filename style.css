@@ -1,127 +1,81 @@
+/* ===== Global ===== */
+body {
+  font-family: Arial, sans-serif;
+  background: #ffffff;
+  color: #24292f;
+  margin: 0;
+}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
+main {
+  padding: 20px;
+  max-width: 900px;
+}
 
-  <title>User Import File Formatter</title>
+/* ===== Mapping Hidden MUST WIN ===== */
+.hidden {
+  display: none !important;
+}
 
-  <!-- ✅ Keyper Branding / Favicons -->
-  <link rel="icon" href="favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+/* ===== Inputs ===== */
+input[type="file"] {
+  margin-top: 8px;
+}
 
-  <!-- ✅ Styles -->
-  <link rel="stylesheet" href="style.css">
+/* ===== Selects ===== */
+select {
+  padding: 6px 8px;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 260px;
+}
 
-  <!-- ✅ SheetJS -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-</head>
-<body>
+/* ===== Example Box ===== */
+.example-box {
+  margin-top: 14px;
+  padding: 10px;
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  font-size: 13px;
+}
 
-  <!-- ✅ Keyper Header (Light, Inventory‑Style) -->
-  <header
-    style="
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 12px 20px;
-      border-bottom: 3px solid #0b5aa5;
-      background-color: #ffffff;
-    "
-  >
-    <a
-      href="https://KeyperSystems.com"
-      target="_blank"
-      rel="noopener noreferrer"
-      style="display:inline-flex; align-items:center;"
-    >
-      <img
-        src="KeyperLogo.webp"
-        alt="Keyper Systems"
-        style="height: 40px; width: auto;"
-      >
-    </a>
+/* ===== Mapping Section ===== */
+#mapping-section {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+}
 
-    <div>
-      <div style="font-size: 18px; font-weight: 600; color: #24292f;">
-        User Import File Formatter
-      </div>
-      <div style="font-size: 12px; color: #57606a;">
-        Key Management &amp; Asset Control Solutions
-      </div>
-    </div>
-  </header>
+/* ===== Mapping Grid ===== */
+#mappingContainer {
+  display: grid;
+  grid-template-columns: 180px 260px;
+  column-gap: 16px;
+  row-gap: 10px;
+  margin-top: 12px;
+}
 
-  <!-- ✅ Main Content (Left‑Aligned Like Inventory) -->
-  <main style="padding: 20px; max-width: 900px;">
+#mappingContainer label {
+  text-align: right;
+  padding-top: 6px;
+  font-size: 13px;
+  color: #57606a;
+}
 
-    <p>
-      Upload your user file (CSV or Excel). This tool verifies, normalizes,
-      and formats your data into the required import structure.
-    </p>
+/* ===== Buttons ===== */
+button {
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: #0b5aa5;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
 
-    <!-- ✅ Upload -->
-    <h3>Upload User File</h3>
-
-    <input type="file" id="fileInput" accept=".csv,.xls,.xlsx">
-
-    <p style="margin-top: 10px; font-size: 14px;">
-      Accepted formats: CSV, XLS, XLSX
-    </p>
-
-    <!-- ✅ Status -->
-    <div id="statusMessage" style="margin-top: 12px;"></div>
-
-    <!-- ✅ Expected Import Format (Light, Inventory‑Style) -->
-    <div
-      style="
-        margin-top: 15px;
-        padding: 10px;
-        background-color: #f6f8fa;
-        border: 1px solid #d0d7de;
-        border-radius: 4px;
-        font-size: 13px;
-      "
-    >
-      <strong>Expected Import Format:</strong>
-      <pre style="margin-top: 8px; white-space: pre-wrap;">
-FirstName,LastName,Description,PIN,Role,Prox,Email,Phone,SAML
-Bob,Smith,,1234,User,1000,bob@company.com,555-555-5555,
-      </pre>
-    </div>
-
-    <!-- ✅ Mapping Section -->
-    <section id="mapping-section" class="hidden">
-      <h3>Map Columns</h3>
-
-      <p>
-        Fields marked with <strong>*</strong> are required.
-      </p>
-
-      <p>
-        Prox values are automatically generated starting at
-        <strong>1000</strong> if not provided.
-      </p>
-
-      <div id="mappingContainer"></div>
-
-      <button id="processMappedData" style="margin-top: 20px;">
-        Process File
-      </button>
-    </section>
-
-    <!-- ✅ Output -->
-    <section id="output-section">
-      <div id="rowCount"></div>
-      <button id="downloadCsv">Download CSV</button>
-    </section>
-
-  </main>
-
-  <!-- ✅ App Logic -->
-  <script src="script.js?v=light-final"></script>
-
-</body>
-</html>
+button:hover {
+  background: #094b8a;
+}
