@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – CSV GENERATION VERSION (PROX + ROLE NORMALIZATION)");
+console.log("✅ NEW SCRIPT LOADED – FINAL ERROR MESSAGE CLEANUP");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -16,20 +16,20 @@ let outputData = [];
 
 // ===== Field Definitions =====
 const fieldDefinitions = [
-    { key: "firstname", label: "FirstName", required: true },
-    { key: "lastname", label: "LastName", required: true },
-    { key: "description", label: "Description", required: false },
-    { key: "pin", label: "PIN", required: true },
-    { key: "role", label: "Role", required: true },
-    { key: "prox", label: "Prox", required: true },
-    { key: "email", label: "Email", required: true },
-    { key: "phone", label: "Phone", required: true },
-    { key: "saml", label: "SAML", required: false }
+  { key: "firstname", label: "FirstName", required: true },
+  { key: "lastname", label: "LastName", required: true },
+  { key: "description", label: "Description", required: false },
+  { key: "pin", label: "PIN", required: true },
+  { key: "role", label: "Role", required: true },
+  { key: "prox", label: "Prox", required: true },
+  { key: "email", label: "Email", required: true },
+  { key: "phone", label: "Phone", required: true },
+  { key: "saml", label: "SAML", required: false }
 ];
 
 // ===== Header Normalization =====
 function normalizeHeader(h) {
-    return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
+  return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
 
 // ===== Event Listeners =====
@@ -41,205 +41,219 @@ hideMapping();
 
 // ===== File Upload =====
 function handleFileUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
 
-    clearStatus();
-    hideMapping();
-    outputData = [];
+  clearStatus();
+  hideMapping();
+  outputData = [];
 
-    setStatus(`Loading file: ${file.name}`);
-    const ext = file.name.split(".").pop().toLowerCase();
+  setStatus(`Loading file: ${file.name}`);
+  const ext = file.name.split(".").pop().toLowerCase();
 
-    if (ext === "csv") readCsvFile(file);
-    else if (ext === "xls" || ext === "xlsx") readExcelFile(file);
-    else setError("Unsupported file type.");
+  if (ext === "csv") readCsvFile(file);
+  else if (ext === "xls" || ext === "xlsx") readExcelFile(file);
+  else setError("Unsupported file type.");
 }
 
 // ===== CSV =====
 function readCsvFile(file) {
-    const reader = new FileReader();
-    reader.onload = e => parseCsv(e.target.result);
-    reader.readAsText(file);
+  const reader = new FileReader();
+  reader.onload = e => parseCsv(e.target.result);
+  reader.readAsText(file);
 }
 
 function parseCsv(text) {
-    const rows = text.split(/\r?\n/).filter(r => r.trim());
-    headers = rows[0].split(",").map(h => h.trim());
+  const rows = text.split(/\r?\n/).filter(r => r.trim());
+  headers = rows[0].split(",").map(h => h.trim());
 
-    rawData = rows.slice(1).map(row => {
-        const values = row.split(",");
-        const o = {};
-        headers.forEach((h, i) => o[h] = values[i]?.trim() || "");
-        return o;
-    });
+  rawData = rows.slice(1).map(row => {
+    const values = row.split(",");
+    const o = {};
+    headers.forEach((h, i) => (o[h] = values[i]?.trim() || ""));
+    return o;
+  });
 
-    postParse("CSV");
+  postParse("CSV");
 }
 
 // ===== Excel =====
 function readExcelFile(file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-        const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
-        const sheet = wb.Sheets[wb.SheetNames[0]];
-        rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-        headers = Object.keys(rawData[0] || {});
-        postParse("Excel");
-    };
-    reader.readAsArrayBuffer(file);
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    headers = Object.keys(rawData[0] || {});
+    postParse("Excel");
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ===== Post Parse =====
 function postParse(type) {
-    setSuccess(`Loaded ${rawData.length} rows from ${type} file.`);
-    if (!checkSchemaMatch()) showMappingUI();
-    else autoMapSchema();
+  setSuccess(`Loaded ${rawData.length} rows from ${type} file.`);
+  if (!checkSchemaMatch()) showMappingUI();
+  else autoMapSchema();
 }
 
 // ===== Schema =====
 function checkSchemaMatch() {
-    const normalized = headers.map(normalizeHeader);
-    return fieldDefinitions.every(f => normalized.includes(f.key));
+  const normalized = headers.map(normalizeHeader);
+  return fieldDefinitions.every(f => normalized.includes(f.key));
 }
 
 function autoMapSchema() {
-    headerMap = {};
-    fieldDefinitions.forEach(f => {
-        const match = headers.find(h => normalizeHeader(h) === f.key);
-        headerMap[f.key] = match || "";
-    });
-    buildOutput();
+  headerMap = {};
+  fieldDefinitions.forEach(f => {
+    const match = headers.find(h => normalizeHeader(h) === f.key);
+    headerMap[f.key] = match || "";
+  });
+  buildOutput();
 }
 
 // ===== Mapping UI =====
 function showMappingUI() {
-    mappingContainer.innerHTML = "";
-    headerMap = {};
+  mappingContainer.innerHTML = "";
+  headerMap = {};
 
-    fieldDefinitions.forEach(f => {
-        const row = document.createElement("div");
-        const label = document.createElement("label");
-        label.textContent = f.label + (f.required ? " *" : "");
+  fieldDefinitions.forEach(f => {
+    const row = document.createElement("div");
 
-        const select = document.createElement("select");
-        select.dataset.field = f.key;
+    const label = document.createElement("label");
+    label.textContent = f.label + (f.required ? " *" : "");
 
-        const empty = document.createElement("option");
-        empty.value = "";
-        empty.textContent = "-- Select Column --";
-        select.appendChild(empty);
+    const select = document.createElement("select");
+    select.dataset.field = f.key;
 
-        headers.forEach(h => {
-            const opt = document.createElement("option");
-            opt.value = h;
-            opt.textContent = h;
-            select.appendChild(opt);
-        });
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "-- Select Column --";
+    select.appendChild(empty);
 
-        row.appendChild(label);
-        row.appendChild(select);
-        mappingContainer.appendChild(row);
+    headers.forEach(h => {
+      const opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = h;
+      select.appendChild(opt);
     });
 
-    mappingSection.classList.remove("hidden");
+    row.appendChild(label);
+    row.appendChild(select);
+    mappingContainer.appendChild(row);
+  });
+
+  mappingSection.classList.remove("hidden");
 }
 
 function hideMapping() {
-    mappingSection.classList.add("hidden");
+  mappingSection.classList.add("hidden");
 }
 
 // ===== Process Mapping =====
 function processMappedData() {
-    headerMap = {};
-    let missing = [];
+  headerMap = {};
+  let missing = [];
 
-    fieldDefinitions.forEach(f => {
-        const val = document.querySelector(`select[data-field="${f.key}"]`).value;
-        if (!val && f.required && f.key !== "prox") {
-            missing.push(f.label);
-        }
-        headerMap[f.key] = val || "";
-    });
-
-    if (missing.length) {
-        setError("Missing required mappings: " + missing.join(", "));
-        return;
+  fieldDefinitions.forEach(f => {
+    const val = document.querySelector(`select[data-field="${f.key}"]`).value;
+    if (!val && f.required && f.key !== "prox") {
+      missing.push(f.label);
     }
+    headerMap[f.key] = val || "";
+  });
 
-    buildOutput();
+  if (missing.length) {
+    setError("Missing required fields: " + missing.join(", "));
+    return;
+  }
+
+  buildOutput();
 }
 
-// ===== Build Output (PROX AUTO-FILL + ROLE NORMALIZATION) =====
+// ===== Build Output (Prox Auto‑Fill + Role Normalization) =====
 function buildOutput() {
-    outputData = [];
-    let proxCounter = 1000;
+  outputData = [];
+  let proxCounter = 1000;
 
-    for (let i = 0; i < rawData.length; i++) {
-        const row = rawData[i];
-        const out = {};
+  for (let i = 0; i < rawData.length; i++) {
+    const row = rawData[i];
+    const out = {};
 
-        for (const f of fieldDefinitions) {
-            const source = headerMap[f.key];
-            let value = source ? row[source] : "";
+    for (const f of fieldDefinitions) {
+      const source = headerMap[f.key];
+      let value = source ? row[source] : "";
 
-            // ✅ PROX AUTO-GENERATION
-            if (f.key === "prox" && !value) {
-                value = String(proxCounter++);
-            }
+      // ✅ Prox auto-fill
+      if (f.key === "prox" && !value) {
+        value = String(proxCounter++);
+      }
 
-            // ✅ ROLE NORMALIZATION
-            if (f.key === "role" && value) {
-                value = value.toLowerCase();
-                value = value === "user" ? "User" :
-                        value === "admin" ? "Admin" : value;
-            }
+      // ✅ Role normalization
+      if (f.key === "role" && value) {
+        value = value.toLowerCase();
+        if (value === "user") value = "User";
+        if (value === "admin") value = "Admin";
+      }
 
-            // Validation
-            if (f.key === "pin" || f.key === "prox") {
-                if (!/^\d{4,}$/.test(value)) {
-                    return setError(`Row ${i + 2}: ${f.label} must be numeric and at least 4 digits.`);
-                }
-            }
-
-            if (f.key === "role" && value !== "User" && value !== "Admin") {
-                return setError(`Row ${i + 2}: Role must be User or Admin.`);
-            }
-
-            out[f.label] = value || "";
+      // ✅ Validation (NO ROW REFERENCES)
+      if (f.key === "pin" || f.key === "prox") {
+        if (!/^\d{4,}$/.test(value)) {
+          return setError(`${f.label} must be numeric and at least 4 digits.`);
         }
+      }
 
-        outputData.push(out);
+      if (f.key === "role" && value !== "User" && value !== "Admin") {
+        return setError("Role must be User or Admin.");
+      }
+
+      out[f.label] = value || "";
     }
 
-    rowCountEl.textContent = `${outputData.length} users ready for import.`;
-    setSuccess("Import-ready CSV generated.");
+    outputData.push(out);
+  }
 
-    downloadCsv();
+  rowCountEl.textContent = `${outputData.length} users ready for import.`;
+  setSuccess("Import‑ready CSV generated.");
+
+  downloadCsv();
 }
 
 // ===== Download =====
 function downloadCsv() {
-    if (!outputData.length) return;
+  if (!outputData.length) return;
 
-    const headers = fieldDefinitions.map(f => f.label);
-    const rows = outputData.map(r => headers.map(h => r[h]).join(","));
-    const csv = [headers.join(","), ...rows].join("\n");
+  const headers = fieldDefinitions.map(f => f.label);
+  const rows = outputData.map(r => headers.map(h => r[h]).join(","));
+  const csv = [headers.join(","), ...rows].join("\n");
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "user_import.csv";
-    a.click();
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "user_import.csv";
+  a.click();
 
-    URL.revokeObjectURL(url);
+  URL.revokeObjectURL(url);
 }
 
-// ===== Status =====
-function setStatus(m) { statusMessage.textContent = m; statusMessage.style.color = "#333"; }
-function setSuccess(m) { statusMessage.textContent = m; statusMessage.style.color = "green"; }
-function setError(m) { statusMessage.textContent = m; statusMessage.style.color = "red"; }
-function clearStatus() { statusMessage.textContent = ""; }
-``
+// ===== Status Helpers =====
+function setStatus(m) {
+  statusMessage.textContent = m;
+  statusMessage.style.color = "#333";
+}
+
+function setSuccess(m) {
+  statusMessage.textContent = m;
+  statusMessage.style.color = "green";
+}
+
+function setError(m) {
+  statusMessage.textContent = m;
+  statusMessage.style.color = "red";
+}
+
+function clearStatus() {
+  statusMessage.textContent = "";
+}
