@@ -21,13 +21,19 @@ input[type="file"] {
   margin-top: 8px;
 }
 
+/* ===== Selects ===== */
 select {
-  width: 100%;
   padding: 6px 8px;
   background-color: #161b22;
   color: #ffffff;
   border: 1px solid #30363d;
   border-radius: 4px;
+}
+
+/* ✅ Prevent absurdly wide dropdowns */
+#mappingContainer select {
+  width: 100%;
+  max-width: 260px;
 }
 
 /* ===== Buttons ===== */
@@ -50,7 +56,7 @@ button:hover {
   font-weight: 500;
 }
 
-/* ===== Expected / Mapping Containers ===== */
+/* ===== Mapping Section Container ===== */
 #mapping-section {
   margin-top: 24px;
   padding: 16px;
@@ -59,18 +65,20 @@ button:hover {
   border-radius: 6px;
 }
 
-/* ===== Mapping Header Text Spacing ===== */
+/* ===== Mapping Helper Text Spacing ===== */
 #mapping-section p {
   margin-top: 6px;
   margin-bottom: 10px;
+  font-size: 13px;
+  color: #aaa;
 }
 
-/* ===== Mapping Grid ===== */
+/* ===== Mapping Grid Layout ===== */
 #mappingContainer {
   display: grid;
   grid-template-columns: 180px 1fr;
-  row-gap: 10px;
   column-gap: 16px;
+  row-gap: 10px;
   margin-top: 14px;
 }
 
@@ -86,7 +94,7 @@ button:hover {
   margin-top: 20px;
 }
 
-/* ===== Utilities ===== */
+/* ===== Utility ===== */
 .hidden {
   display: none;
 }
