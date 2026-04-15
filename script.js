@@ -1,26 +1,28 @@
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
 const statusMessage = document.getElementById("statusMessage");
+const mappingSection = document.getElementById("mapping-section");
+const mappingContainer = document.getElementById("mappingContainer");
+const processMappedBtn = document.getElementById("processMappedData");
 
 let rawData = [];
 let headers = [];
+let headerMap = {};
 
-// ===== Canonical User Import Schema =====
-// These are normalized (lowercase, no spaces/punctuation)
-const canonicalHeaders = [
-    "firstname",
-    "lastname",
-    "description",
-    "pin",
-    "role",
-    "prox",
-    "email",
-    "phone",
-    "saml"
+// ===== Field Definitions =====
+const fieldDefinitions = [
+    { key: "firstname", label: "First Name", required: true },
+    { key: "lastname", label: "Last Name", required: true },
+    { key: "description", label: "Description", required: false },
+    { key: "pin", label: "PIN", required: true },
+    { key: "role", label: "Role", required: true },
+    { key: "prox", label: "Prox", required: true },
+    { key: "email", label: "Email", required: true },
+    { key: "phone", label: "Phone", required: true },
+    { key: "saml", label: "SAML ID", required: false }
 ];
 
 // ===== Header Normalization =====
-// Case-insensitive, spacing and punctuation tolerant
 function normalizeHeader(header) {
     return header
         .toLowerCase()
@@ -30,149 +32,149 @@ function normalizeHeader(header) {
 
 // ===== Event Listeners =====
 fileInput.addEventListener("change", handleFileUpload);
+processMappedBtn.addEventListener("click", processMappedData);
 
 // ===== File Upload Handler =====
 function handleFileUpload(event) {
     const file = event.target.files[0];
-
-    if (!file) {
-        return;
-    }
+    if (!file) return;
 
     clearStatus();
+    hideMapping();
+
+    const ext = file.name.split(".").pop().toLowerCase();
     setStatus(`Loading file: ${file.name}`);
 
-    const fileExtension = file.name.split(".").pop().toLowerCase();
-
-    if (fileExtension === "csv") {
-        readCsvFile(file);
-    } else if (fileExtension === "xls" || fileExtension === "xlsx") {
-        readExcelFile(file);
-    } else {
-        setError("Unsupported file type. Please upload a CSV or Excel file.");
-    }
+    if (ext === "csv") readCsvFile(file);
+    else if (ext === "xls" || ext === "xlsx") readExcelFile(file);
+    else setError("Unsupported file type.");
 }
 
 // ===== CSV Parsing =====
 function readCsvFile(file) {
     const reader = new FileReader();
-
-    reader.onload = function (e) {
-        const text = e.target.result;
-        parseCsv(text);
-    };
-
-    reader.onerror = function () {
-        setError("Failed to read CSV file.");
-    };
-
+    reader.onload = e => parseCsv(e.target.result);
+    reader.onerror = () => setError("Failed to read CSV.");
     reader.readAsText(file);
 }
 
 function parseCsv(text) {
-    const rows = text.split(/\r?\n/).filter(row => row.trim() !== "");
-
-    if (rows.length < 2) {
-        setError("CSV file appears to be empty or missing data.");
-        return;
-    }
-
+    const rows = text.split(/\r?\n/).filter(r => r.trim());
     headers = rows[0].split(",").map(h => h.trim());
+
     rawData = rows.slice(1).map(row => {
         const values = row.split(",");
         const obj = {};
-        headers.forEach((header, index) => {
-            obj[header] = values[index]?.trim() || "";
-        });
+        headers.forEach((h, i) => obj[h] = values[i]?.trim() || "");
         return obj;
     });
 
-    setSuccess(`Loaded ${rawData.length} rows from CSV file.`);
+    postParse("CSV");
+}
+
+// ===== Excel Parsing =====
+function readExcelFile(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        headers = Object.keys(rawData[0] || {});
+        postParse("Excel");
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// ===== Post‑Parse Handling =====
+function postParse(type) {
+    setSuccess(`Loaded ${rawData.length} rows from ${type} file.`);
     console.log("Headers:", headers);
     console.log("Data:", rawData);
 
-    checkSchemaMatch();
-}
-
-// ===== Excel Parsing (XLS / XLSX) =====
-function readExcelFile(file) {
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: "array" });
-
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-                defval: ""
-            });
-
-            if (jsonData.length === 0) {
-                setError("Excel file contains no data.");
-                return;
-            }
-
-            headers = Object.keys(jsonData[0]);
-            rawData = jsonData;
-
-            setSuccess(`Loaded ${rawData.length} rows from Excel file.`);
-            console.log("Headers:", headers);
-            console.log("Data:", rawData);
-
-            checkSchemaMatch();
-
-        } catch (error) {
-            console.error(error);
-            setError("Failed to parse Excel file.");
-        }
-    };
-
-    reader.onerror = function () {
-        setError("Failed to read Excel file.");
-    };
-
-    reader.readAsArrayBuffer(file);
+    if (!checkSchemaMatch()) {
+        showMappingUI();
+    }
 }
 
 // ===== Schema Detection =====
 function checkSchemaMatch() {
-    const normalizedUploadedHeaders = headers.map(normalizeHeader);
+    const normalized = headers.map(normalizeHeader);
+    const missing = fieldDefinitions
+        .filter(f => !normalized.includes(f.key))
+        .map(f => f.key);
 
-    const missingHeaders = canonicalHeaders.filter(
-        required => !normalizedUploadedHeaders.includes(required)
-    );
-
-    if (missingHeaders.length === 0) {
+    if (missing.length === 0) {
         setSuccess("File matches User Import schema. No column mapping required.");
-        console.log("Schema match confirmed.");
         return true;
     }
 
-    console.warn("Schema mismatch. Missing headers:", missingHeaders);
+    console.warn("Schema mismatch. Missing headers:", missing);
     setStatus("File does not match expected format. Column mapping will be required.");
     return false;
 }
 
-// ===== Status Helpers =====
-function setStatus(message) {
-    statusMessage.textContent = message;
-    statusMessage.style.color = "#333";
+// ===== Mapping UI =====
+function showMappingUI() {
+    mappingContainer.innerHTML = "";
+    headerMap = {};
+
+    fieldDefinitions.forEach(field => {
+        const row = document.createElement("div");
+
+        const label = document.createElement("label");
+        label.textContent = field.label + (field.required ? " *" : "");
+
+        const select = document.createElement("select");
+        select.dataset.field = field.key;
+
+        const empty = document.createElement("option");
+        empty.value = "";
+        empty.textContent = "-- Select Column --";
+        select.appendChild(empty);
+
+        headers.forEach(h => {
+            const opt = document.createElement("option");
+            opt.value = h;
+            opt.textContent = h;
+            select.appendChild(opt);
+        });
+
+        row.appendChild(label);
+        row.appendChild(select);
+        mappingContainer.appendChild(row);
+    });
+
+    mappingSection.classList.remove("hidden");
 }
 
-function setSuccess(message) {
-    statusMessage.textContent = message;
-    statusMessage.style.color = "green";
+function hideMapping() {
+    mappingSection.classList.add("hidden");
 }
 
-function setError(message) {
-    statusMessage.textContent = message;
-    statusMessage.style.color = "red";
-}
+// ===== Process Mapping =====
+function processMappedData() {
+    headerMap = {};
+    let missingRequired = [];
 
-function clearStatus() {
-    statusMessage.textContent = "";
+    fieldDefinitions.forEach(field => {
+        const select = document.querySelector(`select[data-field="${field.key}"]`);
+        const value = select.value;
+
+        if (!value && field.required) {
+            missingRequired.push(field.label);
+        }
+
+        headerMap[field.key] = value || null;
+    });
+
+    if (missingRequired.length) {
+        setError(
+            "Missing required mappings: " + missingRequired.join(", ")
+        );
+        return;
+    }
+
+    setSuccess("Column mapping accepted. Ready to generate import file.");
+    console.log("Header Map:", headerMap);
 }
 ``
