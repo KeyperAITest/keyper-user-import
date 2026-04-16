@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – PROX UNIQUENESS GUARANTEED");
+console.log("✅ NEW SCRIPT LOADED – PROX PARTIAL DETECTION FIXED");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -21,24 +21,24 @@ const fieldDefinitions = [
   { key: "description", label: "Description", required: false },
   { key: "pin", label: "PIN", required: true },
   { key: "role", label: "Role", required: true },
-  { key: "prox", label: "Prox", required: false }, // auto-handled
+  { key: "prox", label: "Prox", required: false }, // special handling
   { key: "email", label: "Email", required: false },
   { key: "phone", label: "Phone", required: false }
 ];
 
-// ===== Header Normalization =====
+// ===== Normalize Headers =====
 function normalizeHeader(h) {
   return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
 
-// ===== Event Listeners =====
+// ===== Events =====
 fileInput.addEventListener("change", handleFileUpload);
 processMappedBtn.addEventListener("click", processMappedData);
 downloadBtn.addEventListener("click", downloadCsv);
 
 hideMapping();
 
-// ===== File Upload =====
+// ===== Upload =====
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -73,7 +73,7 @@ function parseCsv(text) {
     return obj;
   });
 
-  postParse("CSV");
+  postParse();
 }
 
 // ===== Excel =====
@@ -84,24 +84,42 @@ function readExcelFile(file) {
     const sheet = wb.Sheets[wb.SheetNames[0]];
     rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
     headers = Object.keys(rawData[0] || {});
-    postParse("Excel");
+    postParse();
   };
   reader.readAsArrayBuffer(file);
 }
 
 // ===== Post Parse =====
-function postParse(type) {
-  setSuccess(`Loaded ${rawData.length} rows from ${type} file.`);
-  if (!checkSchemaMatch()) showMappingUI();
+function postParse() {
+  setSuccess(`Loaded ${rawData.length} rows.`);
+  if (shouldRequireMapping()) showMappingUI();
   else autoMapSchema();
 }
 
-// ===== Schema =====
-function checkSchemaMatch() {
-  const normalized = headers.map(normalizeHeader);
-  return fieldDefinitions.every(f => normalized.includes(f.key));
+// ===== Schema + Completeness Check =====
+function shouldRequireMapping() {
+  const normalizedHeaders = headers.map(normalizeHeader);
+
+  // Missing required fields → mapping
+  for (const f of fieldDefinitions) {
+    if (f.required && !normalizedHeaders.includes(f.key)) {
+      return true;
+    }
+  }
+
+  // ✅ Special rule: Prox exists but is partially filled
+  const proxHeader = headers.find(h => normalizeHeader(h) === "prox");
+  if (proxHeader) {
+    const hasMissingProx = rawData.some(row => !row[proxHeader]);
+    if (hasMissingProx) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
+// ===== Auto Map =====
 function autoMapSchema() {
   headerMap = {};
   fieldDefinitions.forEach(f => {
@@ -156,9 +174,7 @@ function processMappedData() {
 
   fieldDefinitions.forEach(f => {
     const val = document.querySelector(`select[data-field="${f.key}"]`).value;
-    if (!val && f.required) {
-      missing.push(f.label);
-    }
+    if (!val && f.required) missing.push(f.label);
     headerMap[f.key] = val || "";
   });
 
@@ -170,23 +186,19 @@ function processMappedData() {
   buildOutput();
 }
 
-// ===== Build Output (PROX UNIQUE GUARANTEED) =====
+// ===== Build Output (UNIQUE PROX) =====
 function buildOutput() {
   outputData = [];
 
-  // ✅ Collect existing Prox values
   const existingProx = rawData
     .map(row => {
       const source = headerMap["prox"];
-      const val = source ? row[source] : "";
-      return /^\d+$/.test(val) ? parseInt(val, 10) : null;
+      const v = source ? row[source] : "";
+      return /^\d+$/.test(v) ? parseInt(v, 10) : null;
     })
     .filter(v => v !== null);
 
-  // ✅ Determine starting Prox
-  let proxCounter = existingProx.length > 0
-    ? Math.max(...existingProx) + 1
-    : 1000;
+  let proxCounter = existingProx.length ? Math.max(...existingProx) + 1 : 1000;
 
   for (const row of rawData) {
     const out = {};
@@ -195,19 +207,16 @@ function buildOutput() {
       const source = headerMap[f.key];
       let value = source ? row[source] : "";
 
-      // ✅ Auto-generate Prox ONLY when missing
       if (f.key === "prox" && !value) {
         value = String(proxCounter++);
       }
 
-      // ✅ Normalize Role
       if (f.key === "role" && value) {
         value = value.toLowerCase();
         if (value === "user") value = "User";
         if (value === "admin") value = "Admin";
       }
 
-      // ✅ Validation
       if (f.key === "pin" || f.key === "prox") {
         if (!/^\d{4,}$/.test(value)) {
           return setError(`${f.label} must be numeric and at least 4 digits.`);
@@ -226,14 +235,12 @@ function buildOutput() {
 
   rowCountEl.textContent = `${outputData.length} users ready for import.`;
   setSuccess("Import-ready CSV generated.");
-
   downloadCsv();
 }
 
 // ===== Download =====
 function downloadCsv() {
   if (!outputData.length) return;
-
   const headers = fieldDefinitions.map(f => f.label);
   const rows = outputData.map(r => headers.map(h => r[h]).join(","));
   const csv = [headers.join(","), ...rows].join("\n");
@@ -245,7 +252,6 @@ function downloadCsv() {
   a.href = url;
   a.download = "user_import.csv";
   a.click();
-
   URL.revokeObjectURL(url);
 }
 
@@ -254,4 +260,3 @@ function setStatus(m) { statusMessage.textContent = m; statusMessage.style.color
 function setSuccess(m) { statusMessage.textContent = m; statusMessage.style.color = "green"; }
 function setError(m) { statusMessage.textContent = m; statusMessage.style.color = "red"; }
 function clearStatus() { statusMessage.textContent = ""; }
-``
