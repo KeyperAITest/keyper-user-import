@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – PROX AUTO-GEN FIXED");
+console.log("✅ NEW SCRIPT LOADED – PROX UNIQUENESS GUARANTEED");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -14,14 +14,14 @@ let headers = [];
 let headerMap = {};
 let outputData = [];
 
-// ===== Field Definitions (FINAL) =====
+// ===== Field Definitions =====
 const fieldDefinitions = [
   { key: "firstname", label: "FirstName", required: true },
   { key: "lastname", label: "LastName", required: true },
   { key: "description", label: "Description", required: false },
   { key: "pin", label: "PIN", required: true },
   { key: "role", label: "Role", required: true },
-  { key: "prox", label: "Prox", required: false },   // ✅ NOT required at mapping
+  { key: "prox", label: "Prox", required: false }, // auto-handled
   { key: "email", label: "Email", required: false },
   { key: "phone", label: "Phone", required: false }
 ];
@@ -31,14 +31,14 @@ function normalizeHeader(h) {
   return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
 
-// ===== Events =====
+// ===== Event Listeners =====
 fileInput.addEventListener("change", handleFileUpload);
 processMappedBtn.addEventListener("click", processMappedData);
 downloadBtn.addEventListener("click", downloadCsv);
 
 hideMapping();
 
-// ===== Upload =====
+// ===== File Upload =====
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -170,10 +170,23 @@ function processMappedData() {
   buildOutput();
 }
 
-// ===== Build Output (✅ PROX AUTO-GENERATION) =====
+// ===== Build Output (PROX UNIQUE GUARANTEED) =====
 function buildOutput() {
   outputData = [];
-  let proxCounter = 1000;
+
+  // ✅ Collect existing Prox values
+  const existingProx = rawData
+    .map(row => {
+      const source = headerMap["prox"];
+      const val = source ? row[source] : "";
+      return /^\d+$/.test(val) ? parseInt(val, 10) : null;
+    })
+    .filter(v => v !== null);
+
+  // ✅ Determine starting Prox
+  let proxCounter = existingProx.length > 0
+    ? Math.max(...existingProx) + 1
+    : 1000;
 
   for (const row of rawData) {
     const out = {};
@@ -182,7 +195,7 @@ function buildOutput() {
       const source = headerMap[f.key];
       let value = source ? row[source] : "";
 
-      // ✅ Auto-generate Prox if missing
+      // ✅ Auto-generate Prox ONLY when missing
       if (f.key === "prox" && !value) {
         value = String(proxCounter++);
       }
@@ -241,3 +254,4 @@ function setStatus(m) { statusMessage.textContent = m; statusMessage.style.color
 function setSuccess(m) { statusMessage.textContent = m; statusMessage.style.color = "green"; }
 function setError(m) { statusMessage.textContent = m; statusMessage.style.color = "red"; }
 function clearStatus() { statusMessage.textContent = ""; }
+``
