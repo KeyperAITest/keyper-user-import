@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – ADMIN EMAIL REQUIRED (ROW-LEVEL DETAIL)");
+console.log("✅ SCRIPT LOADED – STRICT FIELD VALIDATION RESTORED");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -39,7 +39,7 @@ downloadBtn.addEventListener("click", downloadCsv);
 
 hideMapping();
 
-// ===== Upload Handling =====
+// ===== Upload =====
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -93,35 +93,7 @@ function readExcelFile(file) {
 // ===== Post Parse =====
 function postParse() {
   setSuccess(`Loaded ${rawData.length} rows.`);
-  if (shouldRequireMapping()) showMappingUI();
-  else autoMapSchema();
-}
-
-// ===== Schema & Completeness =====
-function shouldRequireMapping() {
-  const normalized = headers.map(normalizeHeader);
-
-  for (const f of fieldDefinitions) {
-    if (f.required && !normalized.includes(f.key)) return true;
-  }
-
-  const proxHeader = headers.find(h => normalizeHeader(h) === "prox");
-  if (proxHeader) {
-    const partial = rawData.some(row => !row[proxHeader]);
-    if (partial) return true;
-  }
-
-  return false;
-}
-
-// ===== Auto Map =====
-function autoMapSchema() {
-  headerMap = {};
-  fieldDefinitions.forEach(f => {
-    const match = headers.find(h => normalizeHeader(h) === f.key);
-    headerMap[f.key] = match || "";
-  });
-  buildOutput();
+  showMappingUI();
 }
 
 // ===== Mapping UI =====
@@ -131,7 +103,6 @@ function showMappingUI() {
 
   fieldDefinitions.forEach(f => {
     const row = document.createElement("div");
-
     const label = document.createElement("label");
     label.textContent = f.label + (f.required ? " *" : "");
 
@@ -181,57 +152,50 @@ function processMappedData() {
   buildOutput();
 }
 
-// ===== Build Output (Admin Email Enforcement with Row Numbers) =====
+// ===== Build Output (STRICT VALIDATION RESTORED) =====
 function buildOutput() {
   outputData = [];
-
-  const adminEmailMissingRows = [];
-
-  const existingProx = rawData
-    .map(row => {
-      const src = headerMap["prox"];
-      const v = src ? row[src] : "";
-      return /^\d+$/.test(v) ? parseInt(v, 10) : null;
-    })
-    .filter(v => v !== null);
-
-  let proxCounter = existingProx.length ? Math.max(...existingProx) + 1 : 1000;
+  let adminEmailMissingRows = [];
+  let existingProx = [];
 
   rawData.forEach((row, index) => {
     const out = {};
+    const csvRow = index + 2;
 
-    let role = "";
-    let email = "";
+    // Read raw values
+    const rawRole = headerMap.role ? row[headerMap.role] : "";
+    const rawPin = headerMap.pin ? row[headerMap.pin] : "";
+    const rawEmail = headerMap.email ? row[headerMap.email] : "";
 
-    if (headerMap["role"]) {
-      role = row[headerMap["role"]] || "";
-      role = role.toLowerCase() === "admin" ? "Admin" : "User";
+    // === STRICT VALIDATION (before normalization) ===
+    if (!/^\d{4,}$/.test(rawPin)) {
+      return setError("PIN must be numeric and at least 4 digits.");
     }
 
-    if (headerMap["email"]) {
-      email = row[headerMap["email"]] || "";
+    if (!["user", "admin"].includes(rawRole.toLowerCase())) {
+      return setError("Role must be User or Admin.");
     }
 
-    if (role === "Admin" && !email) {
-      adminEmailMissingRows.push(index + 2); // +2 accounts for header row
+    const role = rawRole.toLowerCase() === "admin" ? "Admin" : "User";
+
+    if (role === "Admin" && !rawEmail) {
+      adminEmailMissingRows.push(csvRow);
     }
 
-    for (const f of fieldDefinitions) {
-      const src = headerMap[f.key];
-      let value = src ? row[src] : "";
-
-      if (f.key === "prox" && !value) value = String(proxCounter++);
-      if (f.key === "role") value = role;
-
-      if (f.key === "pin" || f.key === "prox") {
-        if (!/^\d{4,}$/.test(value)) {
-          setError(`${f.label} must be numeric and at least 4 digits.`);
-          return;
-        }
-      }
-
-      out[f.label] = value || "";
+    // Collect Prox
+    if (headerMap.prox) {
+      const v = row[headerMap.prox];
+      if (/^\d+$/.test(v)) existingProx.push(parseInt(v, 10));
     }
+
+    out.FirstName = headerMap.firstname ? row[headerMap.firstname] || "" : "";
+    out.LastName  = headerMap.lastname  ? row[headerMap.lastname]  || "" : "";
+    out.Description = headerMap.description ? row[headerMap.description] || "" : "";
+    out.PIN = rawPin;
+    out.Role = role;
+    out.Prox = ""; // assigned later
+    out.Email = rawEmail || "";
+    out.Phone = headerMap.phone ? row[headerMap.phone] || "" : "";
 
     outputData.push(out);
   });
@@ -242,6 +206,12 @@ function buildOutput() {
     );
   }
 
+  let proxCounter = existingProx.length ? Math.max(...existingProx) + 1 : 1000;
+
+  outputData.forEach(row => {
+    if (!row.Prox) row.Prox = String(proxCounter++);
+  });
+
   rowCountEl.textContent = `${outputData.length} users ready for import.`;
   setSuccess("Import-ready CSV generated.");
   downloadCsv();
@@ -251,7 +221,7 @@ function buildOutput() {
 function downloadCsv() {
   if (!outputData.length) return;
 
-  const headers = fieldDefinitions.map(f => f.label);
+  const headers = Object.keys(outputData[0]);
   const rows = outputData.map(r => headers.map(h => r[h]).join(","));
   const csv = [headers.join(","), ...rows].join("\n");
 
@@ -269,3 +239,4 @@ function setStatus(m) { statusMessage.textContent = m; statusMessage.style.color
 function setSuccess(m) { statusMessage.textContent = m; statusMessage.style.color = "green"; }
 function setError(m) { statusMessage.textContent = m; statusMessage.style.color = "red"; }
 function clearStatus() { statusMessage.textContent = ""; }
+``
