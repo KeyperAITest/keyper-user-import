@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – ADMIN EMAIL REQUIRED");
+console.log("✅ NEW SCRIPT LOADED – ADMIN EMAIL REQUIRED (ROW-LEVEL DETAIL)");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -15,24 +15,24 @@ let headers = [];
 let headerMap = {};
 let outputData = [];
 
-// ===== Canonical Schema =====
+// ===== Schema =====
 const fieldDefinitions = [
   { key: "firstname", label: "FirstName", required: true },
   { key: "lastname", label: "LastName", required: true },
   { key: "description", label: "Description", required: false },
   { key: "pin", label: "PIN", required: true },
   { key: "role", label: "Role", required: true },
-  { key: "prox", label: "Prox", required: false },   // auto‑handled
-  { key: "email", label: "Email", required: false }, // conditionally required
+  { key: "prox", label: "Prox", required: false },
+  { key: "email", label: "Email", required: false },
   { key: "phone", label: "Phone", required: false }
 ];
 
-// ===== Normalize Headers =====
+// ===== Header Normalization =====
 function normalizeHeader(h) {
   return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
 
-// ===== Event Listeners =====
+// ===== Events =====
 fileInput.addEventListener("change", handleFileUpload);
 processMappedBtn.addEventListener("click", processMappedData);
 downloadBtn.addEventListener("click", downloadCsv);
@@ -97,28 +97,24 @@ function postParse() {
   else autoMapSchema();
 }
 
-// ===== Schema & Completeness Check =====
+// ===== Schema & Completeness =====
 function shouldRequireMapping() {
-  const normalizedHeaders = headers.map(normalizeHeader);
+  const normalized = headers.map(normalizeHeader);
 
-  // Missing required fields → mapping
   for (const f of fieldDefinitions) {
-    if (f.required && !normalizedHeaders.includes(f.key)) {
-      return true;
-    }
+    if (f.required && !normalized.includes(f.key)) return true;
   }
 
-  // Prox partially filled → mapping
   const proxHeader = headers.find(h => normalizeHeader(h) === "prox");
   if (proxHeader) {
-    const hasMissingProx = rawData.some(row => !row[proxHeader]);
-    if (hasMissingProx) return true;
+    const partial = rawData.some(row => !row[proxHeader]);
+    if (partial) return true;
   }
 
   return false;
 }
 
-// ===== Auto Mapping =====
+// ===== Auto Map =====
 function autoMapSchema() {
   headerMap = {};
   fieldDefinitions.forEach(f => {
@@ -185,61 +181,52 @@ function processMappedData() {
   buildOutput();
 }
 
-// ===== Build Output (Admin‑Email Enforced, Prox Unique) =====
+// ===== Build Output (Admin Email Enforcement with Row Numbers) =====
 function buildOutput() {
   outputData = [];
 
-  // Collect existing Prox values
+  const adminEmailMissingRows = [];
+
   const existingProx = rawData
     .map(row => {
-      const source = headerMap["prox"];
-      const v = source ? row[source] : "";
+      const src = headerMap["prox"];
+      const v = src ? row[src] : "";
       return /^\d+$/.test(v) ? parseInt(v, 10) : null;
     })
     .filter(v => v !== null);
 
   let proxCounter = existingProx.length ? Math.max(...existingProx) + 1 : 1000;
 
-  for (const row of rawData) {
+  rawData.forEach((row, index) => {
     const out = {};
 
-    // Pre-read role/email for cross-field validation
-    let roleValue = "";
-    let emailValue = "";
+    let role = "";
+    let email = "";
 
-    // First pass: normalize role & capture email
     if (headerMap["role"]) {
-      roleValue = row[headerMap["role"]] || "";
-      roleValue = roleValue.toLowerCase();
-      if (roleValue === "user") roleValue = "User";
-      if (roleValue === "admin") roleValue = "Admin";
+      role = row[headerMap["role"]] || "";
+      role = role.toLowerCase() === "admin" ? "Admin" : "User";
     }
 
     if (headerMap["email"]) {
-      emailValue = row[headerMap["email"]] || "";
+      email = row[headerMap["email"]] || "";
     }
 
-    // ✅ Admin‑requires‑Email (HARD STOP)
-    if (roleValue === "Admin" && !emailValue) {
-      return setError("Admins must have an Email address. One or more Admin users are missing Email values.");
+    if (role === "Admin" && !email) {
+      adminEmailMissingRows.push(index + 2); // +2 accounts for header row
     }
 
-    // Build row
     for (const f of fieldDefinitions) {
-      const source = headerMap[f.key];
-      let value = source ? row[source] : "";
+      const src = headerMap[f.key];
+      let value = src ? row[src] : "";
 
-      if (f.key === "prox" && !value) {
-        value = String(proxCounter++);
-      }
-
-      if (f.key === "role") {
-        value = roleValue;
-      }
+      if (f.key === "prox" && !value) value = String(proxCounter++);
+      if (f.key === "role") value = role;
 
       if (f.key === "pin" || f.key === "prox") {
         if (!/^\d{4,}$/.test(value)) {
-          return setError(`${f.label} must be numeric and at least 4 digits.`);
+          setError(`${f.label} must be numeric and at least 4 digits.`);
+          return;
         }
       }
 
@@ -247,10 +234,16 @@ function buildOutput() {
     }
 
     outputData.push(out);
+  });
+
+  if (adminEmailMissingRows.length) {
+    return setError(
+      `Admins must have an Email address. Missing Email values on rows: ${adminEmailMissingRows.join(", ")}.`
+    );
   }
 
   rowCountEl.textContent = `${outputData.length} users ready for import.`;
-  setSuccess("Import‑ready CSV generated.");
+  setSuccess("Import-ready CSV generated.");
   downloadCsv();
 }
 
@@ -264,7 +257,6 @@ function downloadCsv() {
 
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
-
   const a = document.createElement("a");
   a.href = url;
   a.download = "user_import.csv";
@@ -272,19 +264,8 @@ function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
-// ===== Status Helpers =====
-function setStatus(m) {
-  statusMessage.textContent = m;
-  statusMessage.style.color = "#333";
-}
-function setSuccess(m) {
-  statusMessage.textContent = m;
-  statusMessage.style.color = "green";
-}
-function setError(m) {
-  statusMessage.textContent = m;
-  statusMessage.style.color = "red";
-}
-function clearStatus() {
-  statusMessage.textContent = "";
-}
+// ===== Status =====
+function setStatus(m) { statusMessage.textContent = m; statusMessage.style.color = "#333"; }
+function setSuccess(m) { statusMessage.textContent = m; statusMessage.style.color = "green"; }
+function setError(m) { statusMessage.textContent = m; statusMessage.style.color = "red"; }
+function clearStatus() { statusMessage.textContent = ""; }
