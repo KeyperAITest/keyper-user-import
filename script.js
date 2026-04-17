@@ -1,4 +1,4 @@
-console.log("✅ NEW SCRIPT LOADED – PROX PARTIAL DETECTION FIXED");
+console.log("✅ NEW SCRIPT LOADED – ADMIN EMAIL REQUIRED");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -9,20 +9,21 @@ const processMappedBtn = document.getElementById("processMappedData");
 const downloadBtn = document.getElementById("downloadCsv");
 const rowCountEl = document.getElementById("rowCount");
 
+// ===== State =====
 let rawData = [];
 let headers = [];
 let headerMap = {};
 let outputData = [];
 
-// ===== Field Definitions =====
+// ===== Canonical Schema =====
 const fieldDefinitions = [
   { key: "firstname", label: "FirstName", required: true },
   { key: "lastname", label: "LastName", required: true },
   { key: "description", label: "Description", required: false },
   { key: "pin", label: "PIN", required: true },
   { key: "role", label: "Role", required: true },
-  { key: "prox", label: "Prox", required: false }, // special handling
-  { key: "email", label: "Email", required: false },
+  { key: "prox", label: "Prox", required: false },   // auto‑handled
+  { key: "email", label: "Email", required: false }, // conditionally required
   { key: "phone", label: "Phone", required: false }
 ];
 
@@ -31,14 +32,14 @@ function normalizeHeader(h) {
   return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
 
-// ===== Events =====
+// ===== Event Listeners =====
 fileInput.addEventListener("change", handleFileUpload);
 processMappedBtn.addEventListener("click", processMappedData);
 downloadBtn.addEventListener("click", downloadCsv);
 
 hideMapping();
 
-// ===== Upload =====
+// ===== Upload Handling =====
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -96,7 +97,7 @@ function postParse() {
   else autoMapSchema();
 }
 
-// ===== Schema + Completeness Check =====
+// ===== Schema & Completeness Check =====
 function shouldRequireMapping() {
   const normalizedHeaders = headers.map(normalizeHeader);
 
@@ -107,19 +108,17 @@ function shouldRequireMapping() {
     }
   }
 
-  // ✅ Special rule: Prox exists but is partially filled
+  // Prox partially filled → mapping
   const proxHeader = headers.find(h => normalizeHeader(h) === "prox");
   if (proxHeader) {
     const hasMissingProx = rawData.some(row => !row[proxHeader]);
-    if (hasMissingProx) {
-      return true;
-    }
+    if (hasMissingProx) return true;
   }
 
   return false;
 }
 
-// ===== Auto Map =====
+// ===== Auto Mapping =====
 function autoMapSchema() {
   headerMap = {};
   fieldDefinitions.forEach(f => {
@@ -186,10 +185,11 @@ function processMappedData() {
   buildOutput();
 }
 
-// ===== Build Output (UNIQUE PROX) =====
+// ===== Build Output (Admin‑Email Enforced, Prox Unique) =====
 function buildOutput() {
   outputData = [];
 
+  // Collect existing Prox values
   const existingProx = rawData
     .map(row => {
       const source = headerMap["prox"];
@@ -203,6 +203,28 @@ function buildOutput() {
   for (const row of rawData) {
     const out = {};
 
+    // Pre-read role/email for cross-field validation
+    let roleValue = "";
+    let emailValue = "";
+
+    // First pass: normalize role & capture email
+    if (headerMap["role"]) {
+      roleValue = row[headerMap["role"]] || "";
+      roleValue = roleValue.toLowerCase();
+      if (roleValue === "user") roleValue = "User";
+      if (roleValue === "admin") roleValue = "Admin";
+    }
+
+    if (headerMap["email"]) {
+      emailValue = row[headerMap["email"]] || "";
+    }
+
+    // ✅ Admin‑requires‑Email (HARD STOP)
+    if (roleValue === "Admin" && !emailValue) {
+      return setError("Admins must have an Email address. One or more Admin users are missing Email values.");
+    }
+
+    // Build row
     for (const f of fieldDefinitions) {
       const source = headerMap[f.key];
       let value = source ? row[source] : "";
@@ -211,20 +233,14 @@ function buildOutput() {
         value = String(proxCounter++);
       }
 
-      if (f.key === "role" && value) {
-        value = value.toLowerCase();
-        if (value === "user") value = "User";
-        if (value === "admin") value = "Admin";
+      if (f.key === "role") {
+        value = roleValue;
       }
 
       if (f.key === "pin" || f.key === "prox") {
         if (!/^\d{4,}$/.test(value)) {
           return setError(`${f.label} must be numeric and at least 4 digits.`);
         }
-      }
-
-      if (f.key === "role" && value !== "User" && value !== "Admin") {
-        return setError("Role must be User or Admin.");
       }
 
       out[f.label] = value || "";
@@ -234,13 +250,14 @@ function buildOutput() {
   }
 
   rowCountEl.textContent = `${outputData.length} users ready for import.`;
-  setSuccess("Import-ready CSV generated.");
+  setSuccess("Import‑ready CSV generated.");
   downloadCsv();
 }
 
 // ===== Download =====
 function downloadCsv() {
   if (!outputData.length) return;
+
   const headers = fieldDefinitions.map(f => f.label);
   const rows = outputData.map(r => headers.map(h => r[h]).join(","));
   const csv = [headers.join(","), ...rows].join("\n");
@@ -255,8 +272,19 @@ function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
-// ===== Status =====
-function setStatus(m) { statusMessage.textContent = m; statusMessage.style.color = "#333"; }
-function setSuccess(m) { statusMessage.textContent = m; statusMessage.style.color = "green"; }
-function setError(m) { statusMessage.textContent = m; statusMessage.style.color = "red"; }
-function clearStatus() { statusMessage.textContent = ""; }
+// ===== Status Helpers =====
+function setStatus(m) {
+  statusMessage.textContent = m;
+  statusMessage.style.color = "#333";
+}
+function setSuccess(m) {
+  statusMessage.textContent = m;
+  statusMessage.style.color = "green";
+}
+function setError(m) {
+  statusMessage.textContent = m;
+  statusMessage.style.color = "red";
+}
+function clearStatus() {
+  statusMessage.textContent = "";
+}
