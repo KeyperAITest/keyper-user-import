@@ -54,12 +54,18 @@
   <h3>Upload User File</h3>
   <input type="file" id="fileInput" accept=".csv,.xls,.xlsx">
 
-  <!-- ✅ REQUIRED FIELDS NOTICE (EMPHATIC VERSION) -->
+  <!-- ✅ REQUIRED FIELDS NOTICE (EMPHATIC, CLEAN SPACING) -->
   <div class="example-box" style="margin-top:12px;">
-    <strong>Required Fields</strong><br>
-    First Name, Last Name, PIN (minimum 4 digits), and Role (User or Admin) are required.<br><br>
-    <strong>Important:</strong> Admin users must have an Email address.
-    Imports will fail if any Admin is missing Email.
+    <strong>Required Fields</strong>
+
+    <p style="margin: 8px 0 10px 0;">
+      First Name, Last Name, PIN (minimum 4 digits), and Role (User or Admin) are required.
+    </p>
+
+    <p style="margin: 0;">
+      <strong>Important:</strong> Admin users must have an Email address.
+      Imports will fail if any Admin is missing Email.
+    </p>
   </div>
 
   <div id="statusMessage"></div>
@@ -94,4 +100,3 @@ Bob,Smith,GSM,1234,Admin,1000,bob@company.com,555-555-5555
 <script src="script.js?v=stable"></script>
 </body>
 </html>
-``
