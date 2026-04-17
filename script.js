@@ -1,4 +1,4 @@
-console.log("✅ SCRIPT LOADED – STRICT FIELD VALIDATION RESTORED");
+console.log("✅ SCRIPT LOADED – STRICT ERRORS FIXED");
 
 // ===== DOM Elements =====
 const fileInput = document.getElementById("fileInput");
@@ -27,7 +27,7 @@ const fieldDefinitions = [
   { key: "phone", label: "Phone", required: false }
 ];
 
-// ===== Header Normalization =====
+// ===== Helpers =====
 function normalizeHeader(h) {
   return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
@@ -69,12 +69,12 @@ function parseCsv(text) {
 
   rawData = rows.slice(1).map(row => {
     const values = row.split(",");
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = values[i]?.trim() || "");
-    return obj;
+    const o = {};
+    headers.forEach((h, i) => (o[h] = values[i]?.trim() || ""));
+    return o;
   });
 
-  postParse();
+  showMappingUI();
 }
 
 // ===== Excel =====
@@ -85,15 +85,9 @@ function readExcelFile(file) {
     const sheet = wb.Sheets[wb.SheetNames[0]];
     rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
     headers = Object.keys(rawData[0] || {});
-    postParse();
+    showMappingUI();
   };
   reader.readAsArrayBuffer(file);
-}
-
-// ===== Post Parse =====
-function postParse() {
-  setSuccess(`Loaded ${rawData.length} rows.`);
-  showMappingUI();
 }
 
 // ===== Mapping UI =====
@@ -103,6 +97,7 @@ function showMappingUI() {
 
   fieldDefinitions.forEach(f => {
     const row = document.createElement("div");
+
     const label = document.createElement("label");
     label.textContent = f.label + (f.required ? " *" : "");
 
@@ -135,8 +130,8 @@ function hideMapping() {
 
 // ===== Process Mapping =====
 function processMappedData() {
-  headerMap = {};
   let missing = [];
+  headerMap = {};
 
   fieldDefinitions.forEach(f => {
     const val = document.querySelector(`select[data-field="${f.key}"]`).value;
@@ -152,65 +147,69 @@ function processMappedData() {
   buildOutput();
 }
 
-// ===== Build Output (STRICT VALIDATION RESTORED) =====
+// ===== Build Output (STRICT & CORRECT) =====
 function buildOutput() {
   outputData = [];
-  let adminEmailMissingRows = [];
+  let adminEmailRows = [];
   let existingProx = [];
 
-  rawData.forEach((row, index) => {
-    const out = {};
-    const csvRow = index + 2;
+  // collect existing prox
+  for (const row of rawData) {
+    if (headerMap.prox) {
+      const v = row[headerMap.prox];
+      if (/^\d+$/.test(v)) existingProx.push(parseInt(v, 10));
+    }
+  }
 
-    // Read raw values
-    const rawRole = headerMap.role ? row[headerMap.role] : "";
-    const rawPin = headerMap.pin ? row[headerMap.pin] : "";
+  let proxCounter = existingProx.length ? Math.max(...existingProx) + 1 : 1000;
+
+  for (let i = 0; i < rawData.length; i++) {
+    const row = rawData[i];
+    const csvRow = i + 2;
+    const out = {};
+
+    const rawPin = row[headerMap.pin];
+    const rawRole = row[headerMap.role];
     const rawEmail = headerMap.email ? row[headerMap.email] : "";
 
-    // === STRICT VALIDATION (before normalization) ===
+    // ✅ STRICT VALIDATION
     if (!/^\d{4,}$/.test(rawPin)) {
-      return setError("PIN must be numeric and at least 4 digits.");
+      setError("PIN must be numeric and at least 4 digits.");
+      return;
     }
 
-    if (!["user", "admin"].includes(rawRole.toLowerCase())) {
-      return setError("Role must be User or Admin.");
+    if (!rawRole || !["user","admin"].includes(rawRole.toLowerCase())) {
+      setError("Role must be User or Admin.");
+      return;
     }
 
     const role = rawRole.toLowerCase() === "admin" ? "Admin" : "User";
 
     if (role === "Admin" && !rawEmail) {
-      adminEmailMissingRows.push(csvRow);
+      adminEmailRows.push(csvRow);
     }
 
-    // Collect Prox
-    if (headerMap.prox) {
-      const v = row[headerMap.prox];
-      if (/^\d+$/.test(v)) existingProx.push(parseInt(v, 10));
-    }
-
-    out.FirstName = headerMap.firstname ? row[headerMap.firstname] || "" : "";
-    out.LastName  = headerMap.lastname  ? row[headerMap.lastname]  || "" : "";
-    out.Description = headerMap.description ? row[headerMap.description] || "" : "";
-    out.PIN = rawPin;
-    out.Role = role;
-    out.Prox = ""; // assigned later
-    out.Email = rawEmail || "";
-    out.Phone = headerMap.phone ? row[headerMap.phone] || "" : "";
+    out.FirstName   = row[headerMap.firstname]   || "";
+    out.LastName    = row[headerMap.lastname]    || "";
+    out.Description= headerMap.description ? row[headerMap.description] || "" : "";
+    out.PIN         = rawPin;
+    out.Role        = role;
+    out.Prox        = headerMap.prox && row[headerMap.prox]
+                        ? row[headerMap.prox]
+                        : String(proxCounter++);
+    out.Email       = rawEmail || "";
+    out.Phone       = headerMap.phone ? row[headerMap.phone] || "" : "";
 
     outputData.push(out);
-  });
-
-  if (adminEmailMissingRows.length) {
-    return setError(
-      `Admins must have an Email address. Missing Email values on rows: ${adminEmailMissingRows.join(", ")}.`
-    );
   }
 
-  let proxCounter = existingProx.length ? Math.max(...existingProx) + 1 : 1000;
-
-  outputData.forEach(row => {
-    if (!row.Prox) row.Prox = String(proxCounter++);
-  });
+  // ✅ Admin Email Check AFTER scan
+  if (adminEmailRows.length) {
+    setError(
+      `Admins must have an Email address. Missing Email values on rows: ${adminEmailRows.join(", ")}.`
+    );
+    return;
+  }
 
   rowCountEl.textContent = `${outputData.length} users ready for import.`;
   setSuccess("Import-ready CSV generated.");
@@ -235,8 +234,8 @@ function downloadCsv() {
 }
 
 // ===== Status =====
-function setStatus(m) { statusMessage.textContent = m; statusMessage.style.color = "#333"; }
-function setSuccess(m) { statusMessage.textContent = m; statusMessage.style.color = "green"; }
-function setError(m) { statusMessage.textContent = m; statusMessage.style.color = "red"; }
-function clearStatus() { statusMessage.textContent = ""; }
+function setStatus(m){ statusMessage.textContent = m; statusMessage.style.color="#333"; }
+function setSuccess(m){ statusMessage.textContent = m; statusMessage.style.color="green"; }
+function setError(m){ statusMessage.textContent = m; statusMessage.style.color="red"; }
+function clearStatus(){ statusMessage.textContent=""; }
 ``
