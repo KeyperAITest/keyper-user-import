@@ -54,13 +54,17 @@
   <h3>Upload User File</h3>
   <input type="file" id="fileInput" accept=".csv,.xls,.xlsx">
 
-  <p style="margin-top: 10px; font-size: 14px;">
-      <strong>First Name, Last Name, PIN (4 digit minimum) Role (User or Admin)</strong> are required. Other fields are optional.
-  </p>  
+  <!-- ✅ REQUIRED FIELDS NOTICE (EMPHATIC VERSION) -->
+  <div class="example-box" style="margin-top:12px;">
+    <strong>Required Fields</strong><br>
+    First Name, Last Name, PIN (minimum 4 digits), and Role (User or Admin) are required.<br><br>
+    <strong>Important:</strong> Admin users must have an Email address.
+    Imports will fail if any Admin is missing Email.
+  </div>
 
   <div id="statusMessage"></div>
 
-  <!-- ✅ LIGHT EXPECTED FORMAT BOX -->
+  <!-- ✅ EXPECTED IMPORT FORMAT -->
   <div class="example-box">
     <strong>Expected Import Format:</strong>
     <pre>
@@ -69,17 +73,17 @@ Bob,Smith,GSM,1234,Admin,1000,bob@company.com,555-555-5555
     </pre>
   </div>
 
-  <!-- ✅ HIDDEN BY DEFAULT -->
+  <!-- ✅ MAP COLUMNS (HIDDEN BY DEFAULT) -->
   <section id="mapping-section" class="hidden">
     <h3>Map Columns</h3>
     <p>Fields marked with <strong>*</strong> are required.</p>
     <p>Prox values are auto‑generated starting at <strong>1000</strong> if missing.</p>
 
     <div id="mappingContainer"></div>
-
     <button id="processMappedData">Process File</button>
   </section>
 
+  <!-- ✅ OUTPUT -->
   <section id="output-section">
     <div id="rowCount"></div>
     <button id="downloadCsv">Download CSV</button>
@@ -90,3 +94,4 @@ Bob,Smith,GSM,1234,Admin,1000,bob@company.com,555-555-5555
 <script src="script.js?v=stable"></script>
 </body>
 </html>
+``
