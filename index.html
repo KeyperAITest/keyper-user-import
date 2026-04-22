@@ -5,20 +5,20 @@
   <title>User Import File Formatter</title>
 
   <!-- Favicons -->
-  favicon.ico
-  favicon-32x32.png
-  favicon-16x16.png
-  apple-touch-icon.png
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
   <!-- Styles -->
-  style.css
+  <link rel="stylesheet" href="style.css">
 
   <!-- SheetJS -->
-  https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.jsscript>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
-<!-- ✅ LIGHT HEADER (Inventory‑style) -->
+<!-- ✅ LIGHT HEADER -->
 <header style="
   display:flex;
   align-items:center;
@@ -27,8 +27,8 @@
   border-bottom:3px solid #0b5aa5;
   background:#ffffff;
 ">
-  https://keypersystems.com
-    KeyperLogo.webp
+  <a href="https://keypersystems.com" target="_blank" rel="noopener">
+    <img src="KeyperLogo.webp" alt="Keyper" style="height:40px;">
   </a>
   <div>
     <div style="font-size:18px;font-weight:600;color:#24292f;">
@@ -54,7 +54,7 @@
   <h3>Upload User File</h3>
   <input type="file" id="fileInput" accept=".csv,.xls,.xlsx">
 
-  <!-- ✅ REQUIRED FIELDS NOTICE (EMPHATIC, CLEAN SPACING) -->
+  <!-- ✅ REQUIRED FIELDS NOTICE -->
   <div class="example-box" style="margin-top:12px;">
     <strong>Required Fields</strong>
 
@@ -79,7 +79,7 @@ Bob,Smith,GSM,1234,Admin,1000,bob@company.com,555-555-5555
     </pre>
   </div>
 
-  <!-- ✅ MAP COLUMNS (HIDDEN BY DEFAULT) -->
+  <!-- ✅ MAP COLUMNS -->
   <section id="mapping-section" class="hidden">
     <h3>Map Columns</h3>
     <p>Fields marked with <strong>*</strong> are required.</p>
@@ -97,6 +97,7 @@ Bob,Smith,GSM,1234,Admin,1000,bob@company.com,555-555-5555
 
 </main>
 
-script.js?v=stablescript>
+<!-- ✅ App Logic -->
+<script src="script.js?v=stablescript"></script>
 </body>
 </html>
