@@ -1,254 +1,240 @@
-alert("NEW DUPLICATE FILTER SCRIPT LOADED");
-// ==================================================
-// GLOBAL STATE
-// ==================================================
-let combinedRows = [];
-let filesProcessed = 0;
+console.log("✅ SCRIPT LOADED – STRICT ERRORS FIXED");
 
-let fobGroups = {};
-let cleanRows = [];
-let duplicateSummary = [];
+// ===== DOM Elements =====
+const fileInput = document.getElementById("fileInput");
+const statusMessage = document.getElementById("statusMessage");
+const mappingSection = document.getElementById("mapping-section");
+const mappingContainer = document.getElementById("mappingContainer");
+const processMappedBtn = document.getElementById("processMappedData");
+const downloadBtn = document.getElementById("downloadCsv");
+const rowCountEl = document.getElementById("rowCount");
 
-// ==================================================
-// EVENT WIRING
-// ==================================================
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("analyzeBtn")
-    ?.addEventListener("click", handleAnalyze);
+// ===== State =====
+let rawData = [];
+let headers = [];
+let headerMap = {};
+let outputData = [];
 
-  document.getElementById("exportCleanBtn")
-    ?.addEventListener("click", exportCleanInventory);
+// ===== Schema =====
+const fieldDefinitions = [
+  { key: "firstname", label: "FirstName", required: true },
+  { key: "lastname", label: "LastName", required: true },
+  { key: "description", label: "Description", required: false },
+  { key: "pin", label: "PIN", required: true },
+  { key: "role", label: "Role", required: true },
+  { key: "prox", label: "Prox", required: false },
+  { key: "email", label: "Email", required: false },
+  { key: "phone", label: "Phone", required: false }
+];
 
-  document.getElementById("exportSummaryBtn")
-    ?.addEventListener("click", exportDuplicateSummary);
-});
-
-// ==================================================
-// MAIN ENTRY POINT
-// ==================================================
-function handleAnalyze() {
-  const input = document.getElementById("fileInput");
-  const files = input?.files;
-
-  if (!files || files.length === 0) {
-    showStatus("❌ Please select at least one file.", "error");
-    return;
-  }
-
-  combinedRows = [];
-  filesProcessed = 0;
-  fobGroups = {};
-  cleanRows = [];
-  duplicateSummary = [];
-
-  document.getElementById("exportCleanBtn").disabled = true;
-  document.getElementById("exportSummaryBtn").disabled = true;
-
-  showStatus(`🔄 Processing ${files.length} files...`, "info");
-
-  Array.from(files).forEach(file => parseFile(file));
+// ===== Helpers =====
+function normalizeHeader(h) {
+  return h.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
 
-// ==================================================
-// FILE PARSING (CSV + EXCEL)
-// ==================================================
-function parseFile(file) {
+// ===== Events =====
+fileInput.addEventListener("change", handleFileUpload);
+processMappedBtn.addEventListener("click", processMappedData);
+downloadBtn.addEventListener("click", downloadCsv);
+
+hideMapping();
+
+// ===== Upload =====
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  clearStatus();
+  hideMapping();
+  outputData = [];
+
+  setStatus(`Loading file: ${file.name}`);
   const ext = file.name.split(".").pop().toLowerCase();
 
-  if (ext === "csv") {
-    Papa.parse(file, {
-      header: false,
-      skipEmptyLines: true,
-      complete: r => handleParsedRows(file, r.data)
-    });
-  } else if (ext === "xls" || ext === "xlsx") {
-    parseExcelFile(file);
-  } else {
-    markFileComplete();
-  }
+  if (ext === "csv") readCsvFile(file);
+  else if (ext === "xls" || ext === "xlsx") readExcelFile(file);
+  else setError("Unsupported file type.");
 }
 
-function parseExcelFile(file) {
+// ===== CSV =====
+function readCsvFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => parseCsv(e.target.result);
+  reader.readAsText(file);
+}
+
+function parseCsv(text) {
+  const rows = text.split(/\r?\n/).filter(r => r.trim());
+  headers = rows[0].split(",").map(h => h.trim());
+
+  rawData = rows.slice(1).map(row => {
+    const values = row.split(",");
+    const o = {};
+    headers.forEach((h, i) => (o[h] = values[i]?.trim() || ""));
+    return o;
+  });
+
+  showMappingUI();
+}
+
+// ===== Excel =====
+function readExcelFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
-    const workbook = XLSX.read(
-      new Uint8Array(e.target.result),
-      { type: "array" }
-    );
-
-    const sheet =
-      workbook.Sheets[workbook.SheetNames[0]];
-
-    const rows = XLSX.utils.sheet_to_json(sheet, {
-      header: 1,
-      blankrows: false
-    });
-
-    handleParsedRows(file, rows);
+    const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    headers = Object.keys(rawData[0] || {});
+    showMappingUI();
   };
-
   reader.readAsArrayBuffer(file);
 }
 
-// ==================================================
-// ROW NORMALIZATION
-// ==================================================
-function handleParsedRows(file, rows) {
-  if (!rows || rows.length < 2) {
-    markFileComplete();
-    return;
-  }
+// ===== Mapping UI =====
+function showMappingUI() {
+  mappingContainer.innerHTML = "";
+  headerMap = {};
 
-  const headers = rows[0].map(h =>
-    h ? h.toString().toLowerCase().trim() : ""
-  );
+  fieldDefinitions.forEach(f => {
+    const row = document.createElement("div");
 
-  const fobIndex = headers.findIndex(h =>
-    h === "fob_number" || h === "fob" || h === "fobnumber"
-  );
+    const label = document.createElement("label");
+    label.textContent = f.label + (f.required ? " *" : "");
 
-  if (fobIndex === -1) {
-    markFileComplete();
-    return;
-  }
+    const select = document.createElement("select");
+    select.dataset.field = f.key;
 
-  rows.slice(1).forEach(row => {
-    const fobVal = row[fobIndex];
-    if (!fobVal) return;
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "-- Select Column --";
+    select.appendChild(empty);
 
-    combinedRows.push({
-      sourceFile: file.name,
-      fob: fobVal.toString().trim(),
-      row
+    headers.forEach(h => {
+      const opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = h;
+      select.appendChild(opt);
     });
+
+    row.appendChild(label);
+    row.appendChild(select);
+    mappingContainer.appendChild(row);
   });
 
-  markFileComplete();
+  mappingSection.classList.remove("hidden");
 }
 
-// ==================================================
-// INGESTION COMPLETE
-// ==================================================
-function markFileComplete() {
-  filesProcessed++;
-  const totalFiles =
-    document.getElementById("fileInput").files.length;
+function hideMapping() {
+  mappingSection.classList.add("hidden");
+}
 
-  if (filesProcessed >= totalFiles) {
-    processDuplicates();
+// ===== Process Mapping =====
+function processMappedData() {
+  let missing = [];
+  headerMap = {};
+
+  fieldDefinitions.forEach(f => {
+    const val = document.querySelector(`select[data-field="${f.key}"]`).value;
+    if (!val && f.required) missing.push(f.label);
+    headerMap[f.key] = val || "";
+  });
+
+  if (missing.length) {
+    setError("Missing required fields: " + missing.join(", "));
+    return;
   }
+
+  buildOutput();
 }
 
-// ==================================================
-// DUPLICATE PROCESSING (NEW BEHAVIOR)
-// ==================================================
-function processDuplicates() {
-  // Group by fob
-  combinedRows.forEach(r => {
-    if (!fobGroups[r.fob]) fobGroups[r.fob] = [];
-    fobGroups[r.fob].push(r);
-  });
+// ===== Build Output (STRICT & CORRECT) =====
+function buildOutput() {
+  outputData = [];
+  let adminEmailRows = [];
+  let existingProx = [];
 
-  Object.keys(fobGroups).forEach(fob => {
-    const group = fobGroups[fob];
-
-    if (group.length === 1) {
-      // ✅ Valid, unique fob
-      cleanRows.push(group[0]);
-    } else {
-      // ❌ Duplicate → exclude ALL
-      const sources = [...new Set(
-        group.map(r => r.sourceFile)
-      )];
-
-      duplicateSummary.push({
-        fob,
-        occurrences: group.length,
-        sources
-      });
+  // collect existing prox
+  for (const row of rawData) {
+    if (headerMap.prox) {
+      const v = row[headerMap.prox];
+      if (/^\d+$/.test(v)) existingProx.push(parseInt(v, 10));
     }
-  });
+  }
 
-  finalizeStatus();
+  let proxCounter = existingProx.length ? Math.max(...existingProx) + 1 : 1000;
+
+  for (let i = 0; i < rawData.length; i++) {
+    const row = rawData[i];
+    const csvRow = i + 2;
+    const out = {};
+
+    const rawPin = row[headerMap.pin];
+    const rawRole = row[headerMap.role];
+    const rawEmail = headerMap.email ? row[headerMap.email] : "";
+
+    // ✅ STRICT VALIDATION
+    if (!/^\d{4,}$/.test(rawPin)) {
+      setError("PIN must be numeric and at least 4 digits.");
+      return;
+    }
+
+    if (!rawRole || !["user","admin"].includes(rawRole.toLowerCase())) {
+      setError("Role must be User or Admin.");
+      return;
+    }
+
+    const role = rawRole.toLowerCase() === "admin" ? "Admin" : "User";
+
+    if (role === "Admin" && !rawEmail) {
+      adminEmailRows.push(csvRow);
+    }
+
+    out.FirstName   = row[headerMap.firstname]   || "";
+    out.LastName    = row[headerMap.lastname]    || "";
+    out.Description= headerMap.description ? row[headerMap.description] || "" : "";
+    out.PIN         = rawPin;
+    out.Role        = role;
+    out.Prox        = headerMap.prox && row[headerMap.prox]
+                        ? row[headerMap.prox]
+                        : String(proxCounter++);
+    out.Email       = rawEmail || "";
+    out.Phone       = headerMap.phone ? row[headerMap.phone] || "" : "";
+
+    outputData.push(out);
+  }
+
+  // ✅ Admin Email Check AFTER scan
+  if (adminEmailRows.length) {
+    setError(
+      `Admins must have an Email address. Missing Email values on rows: ${adminEmailRows.join(", ")}.`
+    );
+    return;
+  }
+
+  rowCountEl.textContent = `${outputData.length} users ready for import.`;
+  setSuccess("Import-ready CSV generated.");
+  downloadCsv();
 }
 
-// ==================================================
-// STATUS + ENABLE EXPORTS
-// ==================================================
-function finalizeStatus() {
-  const total = combinedRows.length;
-  const accepted = cleanRows.length;
-  const skipped = duplicateSummary.reduce(
-    (sum, d) => sum + d.occurrences, 0
-  );
+// ===== Download =====
+function downloadCsv() {
+  if (!outputData.length) return;
 
-  showStatus(
-    `✅ Files processed: ${filesProcessed}<br>
-     📦 Total records scanned: ${total}<br>
-     ✅ Included (unique fobs): ${accepted}<br>
-     ❌ Skipped (duplicate fobs): ${skipped}<br>
-     ⚠️ Duplicate fob numbers: ${duplicateSummary.length}`,
-    "success"
-  );
+  const headers = Object.keys(outputData[0]);
+  const rows = outputData.map(r => headers.map(h => r[h]).join(","));
+  const csv = [headers.join(","), ...rows].join("\n");
 
-  document.getElementById("exportCleanBtn").disabled = accepted === 0;
-  document.getElementById("exportSummaryBtn").disabled =
-    duplicateSummary.length === 0;
-}
-
-// ==================================================
-// EXPORT: CLEAN INVENTORY
-// ==================================================
-function exportCleanInventory() {
-  if (cleanRows.length === 0) return;
-
-  const output = [];
-  output.push(cleanRows[0].row.map((_, i) => `Column${i+1}`));
-
-  cleanRows.forEach(r => output.push(r.row));
-
-  downloadCSV(output, "combined_inventory_clean.csv");
-}
-
-// ==================================================
-// EXPORT: DUPLICATE SUMMARY
-// ==================================================
-function exportDuplicateSummary() {
-  if (duplicateSummary.length === 0) return;
-
-  const output = [
-    ["FobNumber", "Occurrences", "SourceFiles"]
-  ];
-
-  duplicateSummary.forEach(d => {
-    output.push([
-      d.fob,
-      d.occurrences,
-      d.sources.join(" | ")
-    ]);
-  });
-
-  downloadCSV(output, "duplicate_fob_summary.csv");
-}
-
-// ==================================================
-// CSV DOWNLOAD HELPER
-// ==================================================
-function downloadCSV(data, filename) {
-  const csv = Papa.unparse(data);
   const blob = new Blob([csv], { type: "text/csv" });
-  const link = document.createElement("a");
-
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "user_import.csv";
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
-// ==================================================
-// STATUS DISPLAY
-// ==================================================
-function showStatus(message, type) {
-  const area = document.getElementById("statusArea");
-  if (!area) return;
-  area.innerHTML = `<p class="${type}">${message}</p>`;
-}
+// ===== Status =====
+function setStatus(m){ statusMessage.textContent = m; statusMessage.style.color="#333"; }
+function setSuccess(m){ statusMessage.textContent = m; statusMessage.style.color="green"; }
+function setError(m){ statusMessage.textContent = m; statusMessage.style.color="red"; }
+function clearStatus(){ statusMessage.textContent=""; }
