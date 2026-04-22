@@ -2,120 +2,101 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>User Import File Formatter</title>
 
-  <title>Inventory Merger – Duplicate Fob Filter</title>
+  <!-- Favicons -->
+  favicon.ico
+  favicon-32x32.png
+  favicon-16x16.png
+  apple-touch-icon.png
 
-  <!-- ✅ Keyper Branding / Favicons -->
-  <link rel="icon" href="favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <!-- Styles -->
+  style.css
 
-  <!-- ✅ Styles -->
-  <link rel="stylesheet" href="style.css">
+  <!-- SheetJS -->
+  https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.jsscript>
 </head>
-
 <body>
 
-  <!-- ✅ Header -->
-  <header style="
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 20px;
-    border-bottom: 3px solid #0b5aa5;
-    background-color: #ffffff;
-  ">
-    <a
-      href="https://KeyperSystems.com"
-      target="_blank"
-      rel="noopener noreferrer"
-      style="display:flex;align-items:center;"
-    >
-      <img
-        src="KeyperLogo.webp"
-        alt="Keyper Systems"
-        style="height:40px;width:auto;"
-      >
-    </a>
-
-    <div>
-      <div style="font-size:18px;font-weight:600;">
-        Inventory Merger – Duplicate Fob Filter
-      </div>
-      <div style="font-size:12px;color:#6a737d;">
-        Automatically excludes duplicate fob numbers before import
-      </div>
+<!-- ✅ LIGHT HEADER (Inventory‑style) -->
+<header style="
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:12px 20px;
+  border-bottom:3px solid #0b5aa5;
+  background:#ffffff;
+">
+  https://keypersystems.com
+    KeyperLogo.webp
+  </a>
+  <div>
+    <div style="font-size:18px;font-weight:600;color:#24292f;">
+      User Import File Formatter
     </div>
-  </header>
+    <div style="font-size:12px;color:#57606a;">
+      Key Management &amp; Asset Control Solutions
+    </div>
+  </div>
+</header>
 
-  <!-- ✅ Main Content -->
-  <main style="padding:20px;max-width:900px;">
+<main>
 
-    <p style="font-size:14px;">
-      Upload inventory exports from multiple locations.  
-      The system will automatically:
+  <p>
+    Upload your user file (CSV or Excel). This tool verifies, normalizes,
+    and formats your data into the required import structure.
+  </p>
+
+  <p style="font-size:14px;margin-top:8px;">
+    Accepted formats: CSV, XLS, XLSX
+  </p>
+
+  <h3>Upload User File</h3>
+  <input type="file" id="fileInput" accept=".csv,.xls,.xlsx">
+
+  <!-- ✅ REQUIRED FIELDS NOTICE (EMPHATIC, CLEAN SPACING) -->
+  <div class="example-box" style="margin-top:12px;">
+    <strong>Required Fields</strong>
+
+    <p style="margin: 8px 0 10px 0;">
+      First Name, Last Name, PIN (minimum 4 digits), and Role (User or Admin) are required.
     </p>
 
-    <ul style="font-size:14px;">
-      <li>✅ Combine all files</li>
-      <li>✅ Keep only unique fob numbers</li>
-      <li>❌ Remove all duplicate fobs</li>
-      <li>📄 Provide a report of skipped fobs for customer review</li>
-    </ul>
+    <p style="margin: 0;">
+      <strong>Important:</strong> Admin users must have an Email address.
+      Imports will fail if any Admin is missing Email.
+    </p>
+  </div>
 
-    <h3>Upload Inventory Files</h3>
+  <div id="statusMessage"></div>
 
-    <input
-      type="file"
-      id="fileInput"
-      multiple
-      accept=".csv,.xls,.xlsx"
-    >
+  <!-- ✅ EXPECTED IMPORT FORMAT -->
+  <div class="example-box">
+    <strong>Expected Import Format:</strong>
+    <pre>
+FirstName,LastName,Description,PIN,Role,Prox,Email,Phone
+Bob,Smith,GSM,1234,Admin,1000,bob@company.com,555-555-5555
+    </pre>
+  </div>
 
-    <button
-      id="analyzeBtn"
-      style="margin-left:10px;"
-    >
-      Analyze & Filter Files
-    </button>
+  <!-- ✅ MAP COLUMNS (HIDDEN BY DEFAULT) -->
+  <section id="mapping-section" class="hidden">
+    <h3>Map Columns</h3>
+    <p>Fields marked with <strong>*</strong> are required.</p>
+    <p>Prox values are auto‑generated starting at <strong>1000</strong> if missing.</p>
 
-    <!-- ✅ Status / Results -->
-    <div
-      id="statusArea"
-      style="margin-top:20px;"
-    ></div>
+    <div id="mappingContainer"></div>
+    <button id="processMappedData">Process File</button>
+  </section>
 
-    <!-- ✅ Export Actions -->
-    <div style="margin-top:25px;">
+  <!-- ✅ OUTPUT -->
+  <section id="output-section">
+    <div id="rowCount"></div>
+    <button id="downloadCsv">Download CSV</button>
+  </section>
 
-      <button
-        id="exportCleanBtn"
-        disabled
-        style="margin-right:10px;"
-      >
-        Download Clean Inventory (Import This)
-      </button>
+</main>
 
-      <button
-        id="exportSummaryBtn"
-        disabled
-      >
-        Download Duplicate Fob Report (Customer Review)
-      </button>
-
-    </div>
-
-  </main>
-
-  <!-- ✅ CSV Parsing -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
-  <!-- ✅ Excel Parsing -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
-  <!-- ✅ App Logic -->
-  <script src="script.js"></script>
-
+script.js?v=stablescript>
 </body>
 </html>
