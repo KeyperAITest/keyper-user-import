@@ -147,13 +147,13 @@ function processMappedData() {
   buildOutput();
 }
 
-// ===== Build Output (STRICT & CORRECT) =====
+// ===== Build Output =====
 function buildOutput() {
   outputData = [];
   let adminEmailRows = [];
   let existingProx = [];
 
-  // collect existing prox
+  // Collect existing prox values
   for (const row of rawData) {
     if (headerMap.prox) {
       const v = row[headerMap.prox];
@@ -172,38 +172,61 @@ function buildOutput() {
     const rawRole = row[headerMap.role];
     const rawEmail = headerMap.email ? row[headerMap.email] : "";
 
-    // ✅ STRICT VALIDATION
+    // ✅ PIN Validation
     if (!/^\d{4,}$/.test(rawPin)) {
       setError("PIN must be numeric and at least 4 digits.");
       return;
     }
 
-    if (!rawRole || !["user","admin"].includes(rawRole.toLowerCase())) {
-      setError("Role must be User or Admin.");
+    // ✅ Role Validation
+    const validRoles = ["user", "admin", "limited", "full"];
+
+    if (!rawRole || !validRoles.includes(rawRole.toLowerCase())) {
+      setError("Role must be User, Admin, Limited, or Full.");
       return;
     }
 
-    const role = rawRole.toLowerCase() === "admin" ? "Admin" : "User";
+    // Normalize role capitalization
+    const role =
+      rawRole.charAt(0).toUpperCase() +
+      rawRole.slice(1).toLowerCase();
 
+    // ✅ Admin Email Requirement
     if (role === "Admin" && !rawEmail) {
       adminEmailRows.push(csvRow);
     }
 
-    out.FirstName   = row[headerMap.firstname]   || "";
-    out.LastName    = row[headerMap.lastname]    || "";
-    out.Description= headerMap.description ? row[headerMap.description] || "" : "";
-    out.PIN         = rawPin;
-    out.Role        = role;
-    out.Prox        = headerMap.prox && row[headerMap.prox]
-                        ? row[headerMap.prox]
-                        : String(proxCounter++);
-    out.Email       = rawEmail || "";
-    out.Phone       = headerMap.phone ? row[headerMap.phone] || "" : "";
+    out.FirstName =
+      row[headerMap.firstname] || "";
+
+    out.LastName =
+      row[headerMap.lastname] || "";
+
+    out.Description =
+      headerMap.description
+        ? row[headerMap.description] || ""
+        : "";
+
+    out.PIN = rawPin;
+
+    out.Role = role;
+
+    out.Prox =
+      headerMap.prox && row[headerMap.prox]
+        ? row[headerMap.prox]
+        : String(proxCounter++);
+
+    out.Email = rawEmail || "";
+
+    out.Phone =
+      headerMap.phone
+        ? row[headerMap.phone] || ""
+        : "";
 
     outputData.push(out);
   }
 
-  // ✅ Admin Email Check AFTER scan
+  // ✅ Admin Email Validation
   if (adminEmailRows.length) {
     setError(
       `Admins must have an Email address. Missing Email values on rows: ${adminEmailRows.join(", ")}.`
@@ -211,8 +234,11 @@ function buildOutput() {
     return;
   }
 
-  rowCountEl.textContent = `${outputData.length} users ready for import.`;
+  rowCountEl.textContent =
+    `${outputData.length} users ready for import.`;
+
   setSuccess("Import-ready CSV generated.");
+
   downloadCsv();
 }
 
@@ -221,20 +247,42 @@ function downloadCsv() {
   if (!outputData.length) return;
 
   const headers = Object.keys(outputData[0]);
-  const rows = outputData.map(r => headers.map(h => r[h]).join(","));
+  const rows = outputData.map(r =>
+    headers.map(h => r[h]).join(",")
+  );
+
   const csv = [headers.join(","), ...rows].join("\n");
 
-  const blob = new Blob([csv], { type: "text/csv" });
+  const blob = new Blob([csv], {
+    type: "text/csv"
+  });
+
   const url = URL.createObjectURL(blob);
+
   const a = document.createElement("a");
   a.href = url;
   a.download = "user_import.csv";
   a.click();
+
   URL.revokeObjectURL(url);
 }
 
 // ===== Status =====
-function setStatus(m){ statusMessage.textContent = m; statusMessage.style.color="#333"; }
-function setSuccess(m){ statusMessage.textContent = m; statusMessage.style.color="green"; }
-function setError(m){ statusMessage.textContent = m; statusMessage.style.color="red"; }
-function clearStatus(){ statusMessage.textContent=""; }
+function setStatus(m) {
+  statusMessage.textContent = m;
+  statusMessage.style.color = "#333";
+}
+
+function setSuccess(m) {
+  statusMessage.textContent = m;
+  statusMessage.style.color = "green";
+}
+
+function setError(m) {
+  statusMessage.textContent = m;
+  statusMessage.style.color = "red";
+}
+
+function clearStatus() {
+  statusMessage.textContent = "";
+}
